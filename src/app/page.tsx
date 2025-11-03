@@ -31,9 +31,8 @@ const words: Word[] = [
   },
 ];
 
-const SWIPE_THRESHOLD_X = 100;
-const MAX_SWIPE_OFFSET_X = 500;
-const ANIMATION_DURATION_MS = 500;
+const ANIMATION_DURATION_MS = 200;
+const MAX_WORDS_STACK = 3;
 
 export default function Home() {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -41,8 +40,22 @@ export default function Home() {
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const [isSwiping, setIsSwiping] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
+  const [screenWidth, setScreenWidth] = useState<number>(800); // Default fallback value
+  
+  const SWIPE_THRESHOLD_X = screenWidth / 6;
+  const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
-  const currentWord = useMemo(() => words[currentIndex % words.length], [currentIndex]);
+  useEffect(() => {
+    // Initialize screen width after mount to avoid hydration mismatch
+    // This setState call is intentional to sync with browser API after hydration
+    setScreenWidth(window.innerWidth); // eslint-disable-line
+    
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const nextWords = useMemo(() => words.slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex]);
 
   const handleSwipeStart = useCallback((clientX: number) => {
     setStartX(clientX);
@@ -73,7 +86,7 @@ export default function Home() {
     if (!isSwiping) return;
     setIsSwiping(false);
 
-    if (swipeOffset === 0) {
+    if (Math.abs(swipeOffset) < 5) {
       debouncedFlipRevealed();
     }
 
@@ -88,42 +101,69 @@ export default function Home() {
     } else {
       setSwipeOffset(0);
     }
-  }, [isSwiping, swipeOffset, debouncedFlipRevealed]);
+  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isSwiping) {
+      setIsSwiping(false);
+      setSwipeOffset(0);
+    }
+  }, [isSwiping]);
 
   return (
     <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
-      <div
-        key={currentIndex}
-        onMouseDown={(e) => handleSwipeStart(e.clientX)}
-        onMouseMove={(e) => handleSwipeMove(e.clientX)}
-        onMouseUp={handleSwipeEnd}
-        onTouchStart={(e) => handleSwipeStart(e.touches[0].clientX)}
-        onTouchMove={(e) => handleSwipeMove(e.touches[0].clientX)}
-        onTouchEnd={handleSwipeEnd}
-        className="flex cursor-pointer flex-col items-center justify-center rounded-lg bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
-        style={{
-          transform: `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`,
-          transition: isSwiping ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
-          opacity: Math.abs(swipeOffset) < SWIPE_THRESHOLD_X ? 1 : 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X),
-        }}
-      >
-        <h1 className="text-5xl font-bold text-zinc-900 sm:text-6xl dark:text-white">
-          {currentWord.chinese}
-        </h1>
-        <div
-          className={`mt-4 flex flex-col items-center gap-2 text-center transition-opacity duration-75 sm:mt-6 ${
-            isRevealed ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <p className="text-xl text-zinc-600 sm:text-2xl dark:text-zinc-400">
-            {currentWord.pinyin}
-          </p>
-          <p className="text-lg text-zinc-500 sm:text-xl dark:text-zinc-500">
-            {currentWord.english}
-          </p>
-        </div>
+      <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
+        {nextWords.map((currentWord, index) => {
+          const isTopCard = index === 0;
+          const scale = 1 - (index * 0.05);
+          const translateY = -(index * 10);
+          
+          return (
+            <div
+              key={currentIndex + index}
+              onMouseDown={isTopCard ? (e) => handleSwipeStart(e.clientX) : undefined}
+              onMouseMove={isTopCard ? (e) => handleSwipeMove(e.clientX) : undefined}
+              onMouseUp={isTopCard ? handleSwipeEnd : undefined}
+              onMouseLeave={isTopCard ? handleMouseLeave : undefined}
+              onTouchStart={isTopCard ? (e) => handleSwipeStart(e.touches[0].clientX) : undefined}
+              onTouchMove={isTopCard ? (e) => handleSwipeMove(e.touches[0].clientX) : undefined}
+              onTouchEnd={isTopCard ? handleSwipeEnd : undefined}
+              className="absolute left-0 top-0 flex w-full h-full cursor-pointer flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
+              style={{
+                zIndex: MAX_WORDS_STACK - index,
+                transform: isTopCard 
+                  ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)` 
+                  : `translateY(${translateY}px) scale(${scale})`,
+                transition: isSwiping && isTopCard ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
+                opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X 
+                  ? 1 
+                  : isTopCard 
+                  ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
+                  : 1,
+                pointerEvents: isTopCard ? 'auto' : 'none',
+              }}
+            >
+              <div className="relative flex flex-col items-center">
+                <h1 className="text-5xl font-bold text-zinc-900 sm:text-6xl dark:text-white">
+                  {currentWord.chinese}
+                </h1>
+                <div
+                  className={`absolute top-full mt-4 flex flex-col items-center gap-2 text-center transition-opacity duration-75 sm:mt-6 ${
+                    isTopCard && isRevealed ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <p className="text-xl text-zinc-600 sm:text-2xl dark:text-zinc-400">
+                    {currentWord.pinyin}
+                  </p>
+                  <p className="text-lg text-zinc-500 sm:text-xl dark:text-zinc-500">
+                    {currentWord.english}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {swipeOffset}
     </div>
   );
 }
