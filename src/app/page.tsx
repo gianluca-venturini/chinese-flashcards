@@ -17,33 +17,13 @@ const colors = [
   '#1abc9c',
 ]
 
-const words: Word[] = [
-  {
-    chinese: "你好",
-    pinyin: "nǐ hǎo",
-    english: "Hello",
-  },
-  {
-    chinese: "再见",
-    pinyin: "zài jiàn",
-    english: "Goodbye",
-  },
-  {
-    chinese: "谢谢",
-    pinyin: "xiè xiè",
-    english: "Thank you",
-  },
-  {
-    chinese: "对不起",
-    pinyin: "duì bù qǐ",
-    english: "Sorry",
-  },
-];
-
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
 
 export default function Home() {
+  const [words, setWords] = useState<Word[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
@@ -54,17 +34,40 @@ export default function Home() {
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
+  // Fetch words from API
+  useEffect(() => {
+    async function fetchWords() {
+      try {
+        const response = await fetch('/api/words');
+        const data = await response.json();
+        
+        if (data.success && data.words) {
+          setWords(data.words);
+        } else {
+          setError('Failed to load words');
+        }
+      } catch (err) {
+        console.error('Error fetching words:', err);
+        setError('Failed to load words');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchWords();
+  }, []);
+
   useEffect(() => {
     // Initialize screen width after mount to avoid hydration mismatch
     // This setState call is intentional to sync with browser API after hydration
-    setScreenWidth(window.innerWidth); // eslint-disable-line
+    setScreenWidth(window.innerWidth);  
     
     const handleResize = () => setScreenWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const nextWords = useMemo(() => words.slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex]);
+  const nextWords = useMemo(() => words.slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex, words]);
 
   const handleSwipeStart = useCallback((clientX: number) => {
     setStartX(clientX);
@@ -118,6 +121,24 @@ export default function Home() {
       setSwipeOffset(0);
     }
   }, [isSwiping]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+        <div className="text-xl text-zinc-600 dark:text-zinc-400">Loading flashcards...</div>
+      </div>
+    );
+  }
+
+  if (error || words.length === 0) {
+    return (
+      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+        <div className="text-xl text-red-600 dark:text-red-400">
+          {error || 'No flashcards available'}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
