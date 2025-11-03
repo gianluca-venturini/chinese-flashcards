@@ -183,10 +183,10 @@ export default function Home() {
                     isTopCard && isRevealed ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <p className="text-xl text-zinc-900 sm:text-2xl">
+                  <p className="whitespace-nowrap text-xl text-zinc-900 sm:text-2xl">
                     {currentWord.pinyin}
                   </p>
-                  <p className="text-lg text-zinc-900 sm:text-xl">
+                  <p className="whitespace-nowrap text-lg text-zinc-900 sm:text-xl">
                     {currentWord.english}
                   </p>
                 </div>
