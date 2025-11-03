@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import type { Word } from '@/lib/db';
+import { sql, Word } from '@/lib/db';
 
 export const runtime = 'edge';
 
 export async function GET() {
   try {
-    const words = await sql<Word[]>`
-      SELECT id, chinese, pinyin, english, created_at
+    const words = await sql`
+      SELECT chinese, pinyin, english, created_at
       FROM words
-      ORDER BY id
-    `;
+    ` as Word[];
 
     return NextResponse.json({ words, success: true });
   } catch (error) {
