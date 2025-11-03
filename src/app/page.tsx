@@ -130,11 +130,19 @@ export default function Home() {
     );
   }
 
-  if (error || words.length === 0) {
+  if (words.length === 0) {
+    return (
+      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+        <div className="text-xl text-zinc-600 dark:text-zinc-400">No flashcards available</div>
+      </div>
+    );
+  }
+
+  if (error) {
     return (
       <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-red-600 dark:text-red-400">
-          {error || 'No flashcards available'}
+          {error}
         </div>
       </div>
     );

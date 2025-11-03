@@ -7,7 +7,6 @@ if (!process.env.DATABASE_URL) {
 export const sql = neon(process.env.DATABASE_URL);
 
 export interface Word {
-  id: number;
   chinese: string;
   pinyin: string;
   english: string;
