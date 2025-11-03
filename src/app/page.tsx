@@ -8,6 +8,15 @@ interface Word {
   english: string;
 }
 
+const colors = [
+  '#f1c40f',
+  '#2ecc71',
+  '#3498db',
+  '#9b59b6',
+  '#e74c3c',
+  '#1abc9c',
+]
+
 const words: Word[] = [
   {
     chinese: "你好",
@@ -141,10 +150,11 @@ export default function Home() {
                   ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
                   : 1,
                 pointerEvents: isTopCard ? 'auto' : 'none',
+                backgroundColor: colors[simpleHash(currentWord.chinese) % colors.length],
               }}
             >
               <div className="relative flex flex-col items-center">
-                <h1 className="text-5xl font-bold text-zinc-900 sm:text-6xl dark:text-white">
+                <h1 className="text-5xl font-bold text-zinc-900 sm:text-6xl">
                   {currentWord.chinese}
                 </h1>
                 <div
@@ -152,10 +162,10 @@ export default function Home() {
                     isTopCard && isRevealed ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <p className="text-xl text-zinc-600 sm:text-2xl dark:text-zinc-400">
+                  <p className="text-xl text-zinc-900 sm:text-2xl">
                     {currentWord.pinyin}
                   </p>
-                  <p className="text-lg text-zinc-500 sm:text-xl dark:text-zinc-500">
+                  <p className="text-lg text-zinc-900 sm:text-xl">
                     {currentWord.english}
                   </p>
                 </div>
@@ -166,4 +176,12 @@ export default function Home() {
       </div>
     </div>
   );
+}
+
+function simpleHash(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i); // hash * 33 + c
+  }
+  return hash >>> 0; // convert to unsigned 32-bit int
 }
