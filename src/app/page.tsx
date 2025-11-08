@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { debounce } from "lodash";
+import { getShortDefinition } from "@/lib/formatDefinition";
 
 interface Word {
   chinese: string;
@@ -195,7 +196,7 @@ export default function Home() {
                     {currentWord.pinyin}
                   </p>
                   <p className="whitespace-nowrap text-lg text-zinc-900 sm:text-xl">
-                    {currentWord.english}
+                    {getShortDefinition(currentWord.english)}
                   </p>
                 </div>
               </div>
