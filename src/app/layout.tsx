@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
+import UploadButton from "./components/UploadButton";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,12 +45,15 @@ async function UserInfoBar() {
       <span className="text-zinc-800 dark:text-zinc-200 text-sm">
         Welcome, {user.displayName || user.primaryEmail}!
       </span>
-      <a 
-        href="/handler/sign-out" 
-        className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-      >
-        Sign out
-      </a>
+      <div className="flex items-center gap-4">
+        <UploadButton />
+        <Link
+          href="/handler/sign-out" 
+          className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+        >
+          Sign out
+        </Link>
+      </div>
     </div>
   );
 }
