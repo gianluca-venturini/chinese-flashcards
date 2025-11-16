@@ -16,11 +16,15 @@ export async function GET() {
       );
     }
 
-    // Fetch words only for the authenticated user
+    // Fetch words only for the authenticated user that are due for review
     const words = await sql`
       SELECT chinese, pinyin, english, created_at
       FROM words
       WHERE user_id = ${user.id}
+        AND (
+          last_review_applied_timestamp IS NULL
+          OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
+        )
     ` as Word[];
 
     return NextResponse.json({ words, success: true });
