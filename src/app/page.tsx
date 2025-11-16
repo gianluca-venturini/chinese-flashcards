@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { debounce } from "lodash";
+import { v7 as uuidv7 } from "uuid";
 import { getShortDefinition } from "@/lib/formatDefinition";
 
 interface Word {
@@ -95,6 +96,27 @@ export default function Home() {
     };
   }, [debouncedFlipRevealed]);
 
+  const submitReview = useCallback((chinese: string, q: number) => {
+    const id = uuidv7();
+    const timestamp = new Date().toISOString();
+    
+    fetch('/api/review', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        chinese,
+        q,
+        timestamp,
+      }),
+    }).catch((error) => {
+      // Silently handle errors - don't block UI if API call fails
+      console.error('Error recording swipe:', error);
+    });
+  }, []);
+
   const handleSwipeEnd = useCallback(() => {
     if (!isSwiping) return;
     setIsSwiping(false);
@@ -104,6 +126,19 @@ export default function Home() {
     }
 
     if (Math.abs(swipeOffset) > SWIPE_THRESHOLD_X) {
+      // Determine q value based on swipe direction
+      // Left swipe (negative offset) = q = 0 (don't know)
+      // Right swipe (positive offset) = q = 5 (know well)
+      const q = swipeOffset > 0 ? 5 : 0;
+      
+      // Get current word
+      const currentWord = words[currentIndex];
+      
+      // Call API endpoint to record swipe
+      if (currentWord) {
+        submitReview(currentWord.chinese, q);
+      }
+
       // Animate card out
       setSwipeOffset(swipeOffset > 0 ? MAX_SWIPE_OFFSET_X : -MAX_SWIPE_OFFSET_X);
       setTimeout(() => {
@@ -114,7 +149,7 @@ export default function Home() {
     } else {
       setSwipeOffset(0);
     }
-  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X]);
+  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X, words, currentIndex, submitReview]);
 
   const handleMouseLeave = useCallback(() => {
     if (isSwiping) {

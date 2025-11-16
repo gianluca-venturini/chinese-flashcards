@@ -12,15 +12,19 @@ async function seed() {
   console.log('🌱 Seeding database...');
 
   try {
-    // Create table
     console.log('Creating words table...');
     await sql`
       CREATE TABLE IF NOT EXISTS words (
-        chinese TEXT PRIMARY KEY,
+        chinese TEXT NOT NULL,
+        user_id TEXT NOT NULL,
         pinyin TEXT NOT NULL,
         english TEXT NOT NULL,
-        user_id TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        n INTEGER DEFAULT 0,
+        ef DOUBLE PRECISION DEFAULT 2.5,
+        i INTEGER DEFAULT 1,
+        last_review_applied_timestamp TIMESTAMP WITH TIME ZONE,
+        PRIMARY KEY (chinese, user_id),
         CONSTRAINT fk_user
           FOREIGN KEY (user_id)
           REFERENCES neon_auth.users_sync(id)
@@ -28,48 +32,20 @@ async function seed() {
       )
     `;
 
-    // Insert sample data (only if there's at least one user)
-    console.log('Inserting sample data...');
-    const users = await sql`
-      SELECT id FROM neon_auth.users_sync WHERE email = 'gianluca.91@gmail.com' LIMIT 1
+    console.log('Creating reviews table...');
+    await sql`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id UUID PRIMARY KEY,
+        chinese TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        q INTEGER NOT NULL,
+        CONSTRAINT fk_word
+          FOREIGN KEY (chinese, user_id)
+          REFERENCES words(chinese, user_id)
+          ON DELETE CASCADE
+      )
     `;
-    
-    if (users.length > 0) {
-      const userId = users[0].id;
-      await sql`
-        INSERT INTO words (chinese, pinyin, english, user_id) VALUES
-          ('你好', 'nǐ hǎo', 'Hello', ${userId}),
-          ('再见', 'zài jiàn', 'Goodbye', ${userId}),
-          ('谢谢', 'xiè xiè', 'Thank you', ${userId}),
-          ('对不起', 'duì bù qǐ', 'Sorry', ${userId}),
-          ('是', 'shì', 'Yes/To be', ${userId}),
-          ('不是', 'bú shì', 'No/Not to be', ${userId}),
-          ('我', 'wǒ', 'I/Me', ${userId}),
-          ('你', 'nǐ', 'You', ${userId}),
-          ('他', 'tā', 'He/Him', ${userId}),
-          ('她', 'tā', 'She/Her', ${userId}),
-          ('好', 'hǎo', 'Good', ${userId}),
-          ('坏', 'huài', 'Bad', ${userId}),
-          ('大', 'dà', 'Big', ${userId}),
-          ('小', 'xiǎo', 'Small', ${userId}),
-          ('多少', 'duō shǎo', 'How much/How many', ${userId}),
-          ('什么', 'shén me', 'What', ${userId}),
-          ('哪里', 'nǎ lǐ', 'Where', ${userId}),
-          ('为什么', 'wèi shén me', 'Why', ${userId}),
-          ('怎么', 'zěn me', 'How', ${userId}),
-          ('现在', 'xiàn zài', 'Now', ${userId})
-        ON CONFLICT DO NOTHING
-      `;
-      console.log('✅ Sample data inserted');
-    } else {
-      console.log('⚠️  No users found in neon_auth.users.sync, skipping sample data');
-    }
-
-    // Read the rows in the words table
-    const words = await sql`
-      SELECT * FROM words
-    `;
-    console.log(`\n📊 Total words in database: ${words.length}`);
 
     console.log('✅ Database seeded successfully!');
   } catch (error) {

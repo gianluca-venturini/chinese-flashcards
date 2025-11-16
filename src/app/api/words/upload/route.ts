@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         await sql`
           INSERT INTO words (chinese, pinyin, english, user_id)
           VALUES (${word.chinese}, ${word.pinyin}, ${word.english}, ${user.id})
-          ON CONFLICT (chinese) DO NOTHING
+          ON CONFLICT (chinese, user_id) DO NOTHING
         `;
         insertedCount++;
       } catch (error) {
