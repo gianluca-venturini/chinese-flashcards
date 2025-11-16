@@ -23,8 +23,9 @@ export async function applyReviews(user_id: string, chinese: string) {
     if (words.length !== 1) {
         throw new Error(`Expected 1 word, got ${words.length}`);
     }
-    if (reviews.length !== 1) {
-        throw new Error(`Expected 1 review, got ${reviews.length}`);
+    if (reviews.length < 1) {
+        // Optimization: nothing to do here
+        return;
     }
     const word = words[0];
 

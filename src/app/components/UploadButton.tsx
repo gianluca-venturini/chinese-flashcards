@@ -69,7 +69,7 @@ export default function UploadButton() {
         <span className={`text-blue-600 dark:text-blue-400 hover:underline text-sm ${
           uploading ? 'opacity-50 cursor-not-allowed' : ''
         }`}>
-          {uploading ? 'Uploading...' : '📁 Upload'}
+          {uploading ? 'Uploading...' : 'Upload'}
         </span>
       </label>
     </div>
