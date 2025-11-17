@@ -11,9 +11,13 @@ const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
 
 export default function Home() {
+  /** List of words that should be reviewed in this session. */
   const [words, setWords] = useState<Word[]>([]);
+  /** List of words that should be reviewed again in the end of this session. */
+  const [repeatWords, setRepeatWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  /** Current index of the word being reviewed. */
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
@@ -29,16 +33,26 @@ export default function Home() {
     async function fetchWords() {
       try {
         const response = await fetch('/api/words');
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error || `Failed to load words (${response.status})`;
+          setError(errorMessage);
+          setLoading(false);
+          return;
+        }
+
         const data = await response.json();
 
         if (data.success && data.words) {
           setWords(data.words);
         } else {
-          setError('Failed to load words');
+          const errorMessage = data.error || 'Failed to load words';
+          setError(errorMessage);
         }
       } catch (err) {
         console.error('Error fetching words:', err);
-        setError('Failed to load words');
+        setError('Failed to load words. Please check your connection and try again.');
       } finally {
         setLoading(false);
       }
@@ -57,7 +71,11 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const nextWords = useMemo(() => words.slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex, words]);
+  const nextWords = useMemo(() => [...words, ...repeatWords].slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex, words, repeatWords]);
+
+  console.log('words', words);
+  console.log('repeatWords', repeatWords);
+  console.log('nextWords', nextWords);
 
   const handleSwipeStart = useCallback((clientX: number) => {
     setStartX(clientX);
@@ -120,11 +138,18 @@ export default function Home() {
       const q = swipeOffset > 0 ? 5 : 0;
 
       // Get current word
-      const currentWord = words[currentIndex];
+      const currentWord = [...words, ...repeatWords][currentIndex];
 
       // Call API endpoint to record swipe
       if (currentWord) {
-        submitReview(currentWord.chinese, q);
+        if (!repeatWords.includes(currentWord)) {
+          // Repeat words are not submitted again because we only count the first review for each word.
+          submitReview(currentWord.chinese, q);
+        }
+        if (q < 3) {
+          // Low quality reviews are added to the repeat words list to make sure to review them again in the end of this session.
+          setRepeatWords(prev => [...prev, currentWord]);
+        }
       }
 
       // Animate card out
@@ -154,20 +179,20 @@ export default function Home() {
     );
   }
 
-  if (words.length === 0) {
-    return (
-      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
-        <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-red-600 dark:text-red-400">
           {error}
         </div>
+      </div>
+    );
+  }
+
+  if (nextWords.length === 0) {
+    return (
+      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+        <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
       </div>
     );
   }
