@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { sql, Word } from '@/lib/db';
 import { stackServerApp } from '@/stack';
 
-export const runtime = 'edge';
-
 export async function GET(request: Request) {
   try {
     // Check if user is authenticated

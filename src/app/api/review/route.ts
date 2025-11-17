@@ -3,8 +3,6 @@ import { sql } from '@/lib/db';
 import { stackServerApp } from '@/stack';
 import {applyReviews} from '../../../lib/reviews';
 
-export const runtime = 'edge';
-
 export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated

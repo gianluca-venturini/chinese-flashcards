@@ -19,12 +19,12 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.67",
-    "@neondatabase/serverless": "^1.0.2",
     "@stackframe/stack": "^2.8.48",
     "@types/lodash": "^4.17.20",
     "ai": "^5.0.93",
     "lodash": "^4.17.21",
     "next": "16.0.1",
+    "postgres": "^3.4.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "server-only": "^0.0.1",
