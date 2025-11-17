@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated
     const user = await stackServerApp.getUser();
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     await applyReviews(user.id, chinese);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Review recorded successfully'
     });

@@ -8,7 +8,7 @@ export async function GET() {
   try {
     // Check if user is authenticated
     const user = await stackServerApp.getUser();
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },

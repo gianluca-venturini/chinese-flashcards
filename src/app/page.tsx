@@ -32,7 +32,7 @@ export default function Home() {
   const [isSwiping, setIsSwiping] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
   const [screenWidth, setScreenWidth] = useState<number>(800); // Default fallback value
-  
+
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
@@ -42,7 +42,7 @@ export default function Home() {
       try {
         const response = await fetch('/api/words');
         const data = await response.json();
-        
+
         if (data.success && data.words) {
           setWords(data.words);
         } else {
@@ -55,15 +55,15 @@ export default function Home() {
         setLoading(false);
       }
     }
-    
+
     fetchWords();
   }, []);
 
   useEffect(() => {
     // Initialize screen width after mount to avoid hydration mismatch
     // This setState call is intentional to sync with browser API after hydration
-    setScreenWidth(window.innerWidth);  
-    
+    setScreenWidth(window.innerWidth);
+
     const handleResize = () => setScreenWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -99,7 +99,7 @@ export default function Home() {
   const submitReview = useCallback((chinese: string, q: number) => {
     const id = uuidv7();
     const timestamp = new Date().toISOString();
-    
+
     fetch('/api/review', {
       method: 'POST',
       headers: {
@@ -130,10 +130,10 @@ export default function Home() {
       // Left swipe (negative offset) = q = 0 (don't know)
       // Right swipe (positive offset) = q = 5 (know well)
       const q = swipeOffset > 0 ? 5 : 0;
-      
+
       // Get current word
       const currentWord = words[currentIndex];
-      
+
       // Call API endpoint to record swipe
       if (currentWord) {
         submitReview(currentWord.chinese, q);
@@ -191,7 +191,7 @@ export default function Home() {
           const isTopCard = index === 0;
           const scale = 1 - (index * 0.05);
           const translateY = -(index * 10);
-          
+
           return (
             <div
               key={currentIndex + index}
@@ -205,15 +205,15 @@ export default function Home() {
               className="absolute left-0 top-0 flex w-full h-full cursor-pointer flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
               style={{
                 zIndex: MAX_WORDS_STACK - index,
-                transform: isTopCard 
-                  ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)` 
+                transform: isTopCard
+                  ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`
                   : `translateY(${translateY}px) scale(${scale})`,
                 transition: isSwiping && isTopCard ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
-                opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X 
-                  ? 1 
-                  : isTopCard 
-                  ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
-                  : 1,
+                opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X
+                  ? 1
+                  : isTopCard
+                    ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
+                    : 1,
                 pointerEvents: isTopCard ? 'auto' : 'none',
                 backgroundColor: colors[simpleHash(currentWord.chinese) % colors.length],
               }}

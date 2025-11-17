@@ -5,11 +5,11 @@
  */
 export function getShortDefinition(definition: string): string {
   if (!definition) return definition;
-  
+
   // Find the first semicolon or period
   const semicolonIndex = definition.indexOf(';');
   const periodIndex = definition.indexOf('.');
-  
+
   let endIndex = -1;
   if (semicolonIndex !== -1 && periodIndex !== -1) {
     // Use whichever comes first
@@ -19,11 +19,11 @@ export function getShortDefinition(definition: string): string {
   } else if (periodIndex !== -1) {
     endIndex = periodIndex;
   }
-  
+
   if (endIndex !== -1) {
     return definition.slice(0, endIndex).trim();
   }
-  
+
   return definition.trim();
 }
 

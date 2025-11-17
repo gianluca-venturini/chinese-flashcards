@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Enable indentation formatting
+      indent: ["error", 2, { SwitchCase: 1 }],
+      // Ensure consistent spacing
+      "eol-last": ["error", "always"],
+      "no-trailing-spaces": "error",
+    },
+  },
 ]);
 
 export default eslintConfig;

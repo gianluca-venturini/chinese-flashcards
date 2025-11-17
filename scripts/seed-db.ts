@@ -2,7 +2,7 @@ import { sql } from '@/lib/db';
 
 async function seed() {
   const databaseUrl = process.env.DATABASE_URL;
-  
+
   if (!databaseUrl) {
     console.error('❌ DATABASE_URL environment variable is not set');
     console.error('Please set DATABASE_URL in your .env.local file');

@@ -8,7 +8,7 @@ export async function POST() {
   try {
     // Check if user is authenticated
     const user = await stackServerApp.getUser();
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },
@@ -27,7 +27,7 @@ export async function POST() {
       WHERE user_id = ${user.id}
     `;
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Stats reset successfully'
     });

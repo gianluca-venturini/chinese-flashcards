@@ -17,7 +17,7 @@ test("parsePlecoXML parses a single card correctly", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(1);
   expect(result[0]).toEqual({
     chinese: "方便面",
@@ -55,7 +55,7 @@ test("parsePlecoXML parses multiple cards correctly", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(3);
   expect(result[0]).toEqual({
     chinese: "方便",
@@ -81,7 +81,7 @@ test("parsePlecoXML handles empty XML", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(0);
 });
 
@@ -98,7 +98,7 @@ test("parsePlecoXML ignores cards without Chinese headword", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(0);
 });
 
@@ -116,7 +116,7 @@ test("parsePlecoXML ignores cards without pinyin", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(0);
 });
 
@@ -134,7 +134,7 @@ test("parsePlecoXML uses pinyin as fallback when English definition is missing",
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(1);
   expect(result[0]).toEqual({
     chinese: "测试",
@@ -149,7 +149,7 @@ test("parsePlecoXML handles real-world XML format", () => {
 noun convenience; favour</defn></entry><dictref dictid="PACE" entryid="20775680"/></card></cards></plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(2);
   expect(result[0]).toEqual({
     chinese: "方便面",
@@ -185,7 +185,7 @@ test("parsePlecoXML handles different tone numbers correctly", () => {
 </plecoflash>`;
 
   const result = parsePlecoXML(xml);
-  
+
   expect(result).toHaveLength(2);
   expect(result[0]).toEqual({
     chinese: "家",

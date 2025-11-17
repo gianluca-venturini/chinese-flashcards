@@ -33,10 +33,10 @@ test("getShortDefinition trims whitespace", () => {
 test("getShortDefinition handles real-world example from flash.xml", () => {
   // From "家" card: "noun 1 family; household 2 home..."
   expect(getShortDefinition("noun 1 family; household 2 home 3 person")).toBe("noun 1 family");
-  
+
   // From "医生" card: "noun doctor; medical man"
   expect(getShortDefinition("noun doctor; medical man")).toBe("noun doctor");
-  
+
   // From "城市" card: "noun town; city"
   expect(getShortDefinition("noun town; city")).toBe("noun town");
 });

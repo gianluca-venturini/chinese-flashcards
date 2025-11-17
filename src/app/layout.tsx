@@ -23,15 +23,15 @@ export const metadata: Metadata = {
 
 async function UserInfoBar() {
   const user = await stackServerApp.getUser();
-  
+
   if (!user) {
     return (
       <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 flex justify-between items-center">
         <span className="text-zinc-800 dark:text-zinc-200 text-sm">
           Welcome to Chinese Flashcards
         </span>
-        <a 
-          href="/auth/signin" 
+        <a
+          href="/auth/signin"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
           Sign in
@@ -48,7 +48,7 @@ async function UserInfoBar() {
       <div className="flex items-center gap-4">
         <UploadButton />
         <Link
-          href="/handler/sign-out" 
+          href="/handler/sign-out"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
           Sign out

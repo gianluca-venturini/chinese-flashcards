@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated
     const user = await stackServerApp.getUser();
-    
+
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Get the uploaded file
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    
+
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided', success: false },
@@ -28,10 +28,10 @@ export async function POST(request: NextRequest) {
 
     // Read file content
     const fileContent = await file.text();
-    
+
     // Parse XML
     const parsedWords = parsePlecoXML(fileContent);
-    
+
     if (parsedWords.length === 0) {
       return NextResponse.json(
         { error: 'No words found in file', success: false },

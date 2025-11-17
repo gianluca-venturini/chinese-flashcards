@@ -12,18 +12,18 @@ function convertPinyinTones(pinyin: string): string {
 
   // Split into syllables (each syllable ends with a tone number)
   const syllables = pinyin.match(/[a-zü]+[1-5]/gi) || [];
-  
+
   const convertedSyllables = syllables.map(syllable => {
     let result = syllable.toLowerCase();
     const toneMatch = result.match(/([1-5])$/);
     if (!toneMatch) return result;
-    
+
     const tone = toneMatch[1];
     const base = result.slice(0, -1); // Remove the tone number
-    
+
     // Find the vowel to apply the tone mark to
     // Priority: a, e, o, then i/u (but iu -> i, ui -> u)
-    
+
     if (base.includes('iu')) {
       // iu -> i gets the tone
       const iIndex = base.indexOf('i');
@@ -66,46 +66,46 @@ function convertPinyinTones(pinyin: string): string {
       // No vowel found, return as is
       result = base;
     }
-    
+
     return result;
   });
-  
+
   return convertedSyllables.join(' ');
 }
 
 export function parsePlecoXML(xmlContent: string): Array<{ chinese: string; pinyin: string; english: string }> {
   const words: Array<{ chinese: string; pinyin: string; english: string }> = [];
-  
+
   // Extract all card elements
   const cardRegex = /<card[^>]*>([\s\S]*?)<\/card>/g;
   let cardMatch;
-  
+
   while ((cardMatch = cardRegex.exec(xmlContent)) !== null) {
     const cardContent = cardMatch[1];
-    
+
     // Extract simplified Chinese (charset="sc")
     const scMatch = cardContent.match(/<headword charset="sc">([^<]+)<\/headword>/);
     const chinese = scMatch ? scMatch[1].trim() : null;
-    
+
     // Extract pinyin
     const pinyinMatch = cardContent.match(/<pron[^>]*tones="numbers">([^<]+)<\/pron>/);
     const pinyinNumbers = pinyinMatch ? pinyinMatch[1].trim() : null;
-    
+
     // Extract English definition
     const defnMatch = cardContent.match(/<defn>([\s\S]*?)<\/defn>/);
     const english = defnMatch ? defnMatch[1].trim() : null;
-    
+
     if (chinese && pinyinNumbers) {
       const pinyin = convertPinyinTones(pinyinNumbers);
       // Use English definition if available, otherwise fall back to pinyin
-      words.push({ 
-        chinese, 
-        pinyin, 
-        english: english || pinyin 
+      words.push({
+        chinese,
+        pinyin,
+        english: english || pinyin
       });
     }
   }
-  
+
   return words;
 }
 
