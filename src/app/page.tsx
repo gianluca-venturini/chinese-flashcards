@@ -73,10 +73,6 @@ export default function Home() {
 
   const nextWords = useMemo(() => [...words, ...repeatWords].slice(currentIndex, currentIndex + MAX_WORDS_STACK), [currentIndex, words, repeatWords]);
 
-  console.log('words', words);
-  console.log('repeatWords', repeatWords);
-  console.log('nextWords', nextWords);
-
   const handleSwipeStart = useCallback((clientX: number) => {
     setStartX(clientX);
     setIsSwiping(true);
@@ -162,7 +158,7 @@ export default function Home() {
     } else {
       setSwipeOffset(0);
     }
-  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X, words, currentIndex, submitReview]);
+  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X, words, repeatWords, currentIndex, submitReview]);
 
   const handleMouseLeave = useCallback(() => {
     if (isSwiping) {
@@ -232,7 +228,7 @@ export default function Home() {
               }}
             >
               <div className="relative flex flex-col items-center">
-                <h1 className="text-5xl font-bold text-zinc-900 sm:text-6xl">
+                <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
                   {currentWord.chinese}
                 </h1>
                 <div
