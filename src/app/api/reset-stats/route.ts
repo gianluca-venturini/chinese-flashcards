@@ -16,6 +16,12 @@ export async function POST() {
       );
     }
 
+    // Delete all reviews for the current user
+    await sql`
+      DELETE FROM reviews
+      WHERE user_id = ${user.id}
+    `;
+
     // Reset all stats for the current user to default values
     await sql`
       UPDATE words
