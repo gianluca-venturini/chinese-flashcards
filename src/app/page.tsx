@@ -8,15 +8,15 @@ import { Word } from "@/lib/db";
 
 const CATEGORY_COLORS: { [key in CategoryId]: string } = {
   'people_identity': '#FFCDD2', // Red 100
-  'body_health': '#F48FB1', // Pink 200
-  'home_objects_daily': '#CE93D8', // Purple 200
-  'food_restaurant_shopping': '#EA80FC', // Deep Purple A100
-  'places_transport_travel': '#9FA8DA', // Indigo 200
-  'nature_weather_environment': '#90CAF9', // Light Blue 200
-  'time_numbers_measure': '#84FFFF', // Cyan A100
-  'school_work_technology': '#80CBC4', // Teal 200
-  'feelings_thoughts_communication': '#A5D6A7', // Green 200
-  'society_culture_hobbies': '#FFAB91', // Orange 200
+  'body_health': '#F8BBD0', // Pink 100
+  'home_objects_daily': '#E1BEE7', // Purple 100
+  'food_restaurant_shopping': '#D1C4E9', // Deep Purple 100
+  'places_transport_travel': '#C5CAE9', // Indigo 100
+  'nature_weather_environment': '#BBDEFB', // Light Blue 100
+  'time_numbers_measure': '#B2EBF2', // Cyan 100
+  'school_work_technology': '#B2DFDB', // Teal 100
+  'feelings_thoughts_communication': '#C8E6C9', // Green 100
+  'society_culture_hobbies': '#FFE0B2', // Orange 100
 };
 const UNKNOWN_CATEGORY_COLOR = '#FFFFFF';
 
