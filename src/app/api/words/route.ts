@@ -4,7 +4,7 @@ import { stackServerApp } from '@/stack';
 
 export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // Check if user is authenticated
     const user = await stackServerApp.getUser();
@@ -16,6 +16,10 @@ export async function GET() {
       );
     }
 
+    // Extract limit from query parameters, default to 10
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+
     // Fetch words only for the authenticated user that are due for review
     const words = await sql`
       SELECT chinese, pinyin, english, created_at, category
@@ -25,7 +29,7 @@ export async function GET() {
           last_review_applied_timestamp IS NULL
           OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
         )
-      LIMIT 10
+      LIMIT ${limit}
     ` as Word[];
 
     return NextResponse.json({ words, success: true });
