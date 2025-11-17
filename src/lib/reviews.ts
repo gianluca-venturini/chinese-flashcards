@@ -30,16 +30,29 @@ export async function applyReviews(user_id: string, chinese: string) {
   const word = words[0];
 
   // Execute the update following the SM-2 algorithm
+  // see https://en.wikipedia.org/wiki/SuperMemo#Description_of_SM-2_algorithm
   let n: number = word['n'];
   let ef: number = word['ef'];
   let i: number = word['i'];
   let last_review_applied_timestamp: string | null = null;
   for (const review of reviews) {
     const q: number = review['q'];
+    if (q >= 3) {
+      if (n === 0) {
+        i = 1;
+      } else if (n === 1) {
+        i = 6;
+      } else {
+        i = Math.round(i * ef);
+      }
+      n = n + 1;
+    } else {
+      n = 0;
+      i = 1;
+    }
     last_review_applied_timestamp = review['created_at'];
-    n = n + 1;
     ef = ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
-    i = i + 1;
+    ef = Math.max(1.3, ef);
   }
   await sql`
         UPDATE words
