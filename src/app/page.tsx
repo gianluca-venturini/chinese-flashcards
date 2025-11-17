@@ -3,21 +3,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { debounce } from "lodash";
 import { v7 as uuidv7 } from "uuid";
 import { getShortDefinition } from "@/lib/formatDefinition";
+import { CategoryId } from "@/lib/categories";
+import { Word } from "@/lib/db";
 
-interface Word {
-  chinese: string;
-  pinyin: string;
-  english: string;
-}
-
-const colors = [
-  '#FFF8E1',
-  '#E0F2F1',
-  '#E3F2FD',
-  '#F3E5F5',
-  '#FFEBEE',
-  '#ECEFF1',
-]
+const CATEGORY_COLORS: { [key in CategoryId]: string } = {
+  'people_identity': '#FFCDD2', // Red 100
+  'body_health': '#F48FB1', // Pink 200
+  'home_objects_daily': '#CE93D8', // Purple 200
+  'food_restaurant_shopping': '#EA80FC', // Deep Purple A100
+  'places_transport_travel': '#9FA8DA', // Indigo 200
+  'nature_weather_environment': '#90CAF9', // Light Blue 200
+  'time_numbers_measure': '#84FFFF', // Cyan A100
+  'school_work_technology': '#80CBC4', // Teal 200
+  'feelings_thoughts_communication': '#A5D6A7', // Green 200
+  'society_culture_hobbies': '#FFAB91', // Orange 200
+};
+const UNKNOWN_CATEGORY_COLOR = '#FFFFFF';
 
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
@@ -215,7 +216,7 @@ export default function Home() {
                     ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
                     : 1,
                 pointerEvents: isTopCard ? 'auto' : 'none',
-                backgroundColor: colors[simpleHash(currentWord.chinese) % colors.length],
+                backgroundColor: CATEGORY_COLORS[currentWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
               }}
             >
               <div className="relative flex flex-col items-center">
@@ -241,12 +242,4 @@ export default function Home() {
       </div>
     </div>
   );
-}
-
-function simpleHash(str: string): number {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash) + str.charCodeAt(i); // hash * 33 + c
-  }
-  return hash >>> 0; // convert to unsigned 32-bit int
 }

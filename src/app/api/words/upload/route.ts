@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { stackServerApp } from '@/stack';
 import { parsePlecoXML } from '@/lib/parsePlecoXML';
+import { classifyChineseWord } from '@/lib/categories';
 
 export async function POST(request: NextRequest) {
   try {

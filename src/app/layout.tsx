@@ -4,6 +4,7 @@ import "./globals.css";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
 import UploadButton from "./components/UploadButton";
+import ClassifyButton from "./components/ClassifyButton";
 import Link from "next/link";
 
 const geistSans = Geist({
@@ -47,6 +48,7 @@ async function UserInfoBar() {
       </span>
       <div className="flex items-center gap-4">
         <UploadButton />
+        <ClassifyButton />
         <Link
           href="/handler/sign-out"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"

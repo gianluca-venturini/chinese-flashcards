@@ -12,13 +12,17 @@
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "test": "bun test",
-    "db:seed": "bun run scripts/seed-db.ts"
+    "test": "bun --env-file=.env.local test",
+    "test:integration": "bun --env-file=.env.local test ./src/**/*.integration.ts",
+    "db:seed": "bun run scripts/seed-db.ts",
+    "env:pull": "bunx vercel env pull .env.local"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.67",
     "@neondatabase/serverless": "^1.0.2",
     "@stackframe/stack": "^2.8.48",
     "@types/lodash": "^4.17.20",
+    "ai": "^5.0.93",
     "lodash": "^4.17.21",
     "next": "16.0.1",
     "react": "19.2.0",
@@ -36,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vercel": "^48.10.2"
   }
 }
