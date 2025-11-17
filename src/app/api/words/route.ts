@@ -25,6 +25,7 @@ export async function GET() {
           last_review_applied_timestamp IS NULL
           OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
         )
+      LIMIT 10
     ` as Word[];
 
     return NextResponse.json({ words, success: true });
