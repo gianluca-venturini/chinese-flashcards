@@ -16,21 +16,34 @@ export async function GET(request: Request) {
       );
     }
 
-    // Extract limit from query parameters, default to 10
+    // Extract query parameters
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const all = searchParams.get('all') === 'true';
 
-    // Fetch words only for the authenticated user that are due for review
-    const words = await sql`
+    // Fetch words for the authenticated user
+    let words: Word[];
+    if (all) {
+      // Fetch all words for the user
+      words = await sql`
       SELECT chinese, pinyin, english, created_at, category
       FROM words
       WHERE user_id = ${user.id}
-        AND (
-          last_review_applied_timestamp IS NULL
-          OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
-        )
-      LIMIT ${limit}
-    ` as Word[];
+      ORDER BY created_at DESC
+      ` as Word[];
+    } else {
+      const limit = 10;
+      // Fetch words that are due for review
+      words = await sql`
+        SELECT chinese, pinyin, english, created_at, category
+        FROM words
+        WHERE user_id = ${user.id}
+          AND (
+            last_review_applied_timestamp IS NULL
+            OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
+          )
+        LIMIT ${limit}
+      ` as Word[];
+    }
 
     return NextResponse.json({ words, success: true });
   } catch (error) {
