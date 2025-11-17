@@ -11,5 +11,14 @@ export interface Word {
   pinyin: string;
   english: string;
   created_at: Date;
+  category: string;
+}
+
+export interface Review {
+  id: string;
+  chinese: string;
+  user_id: string;
+  created_at: Date;
+  q: number;
 }
 

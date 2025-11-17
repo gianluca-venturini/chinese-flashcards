@@ -11,12 +11,12 @@ interface Word {
 }
 
 const colors = [
-  '#f1c40f',
-  '#2ecc71',
-  '#3498db',
-  '#9b59b6',
-  '#e74c3c',
-  '#1abc9c',
+  '#FFF8E1',
+  '#E0F2F1',
+  '#E3F2FD',
+  '#F3E5F5',
+  '#FFEBEE',
+  '#ECEFF1',
 ]
 
 const ANIMATION_DURATION_MS = 200;

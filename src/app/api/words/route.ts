@@ -18,7 +18,7 @@ export async function GET() {
 
     // Fetch words only for the authenticated user that are due for review
     const words = await sql`
-      SELECT chinese, pinyin, english, created_at
+      SELECT chinese, pinyin, english, created_at, category
       FROM words
       WHERE user_id = ${user.id}
         AND (

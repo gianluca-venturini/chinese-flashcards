@@ -24,6 +24,7 @@ async function seed() {
         ef DOUBLE PRECISION DEFAULT 2.5,
         i INTEGER DEFAULT 1,
         last_review_applied_timestamp TIMESTAMP WITH TIME ZONE,
+        category TEXT,
         PRIMARY KEY (chinese, user_id),
         CONSTRAINT fk_user
           FOREIGN KEY (user_id)
