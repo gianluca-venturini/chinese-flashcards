@@ -49,7 +49,7 @@ async function UserInfoBar() {
           href="/words"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
-          Word List
+          List
         </Link>
         <Link
           href="/admin"
@@ -61,7 +61,7 @@ async function UserInfoBar() {
           href="/handler/sign-out"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
-          Sign out
+          Logout
         </Link>
       </div>
     </div>
