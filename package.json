@@ -15,6 +15,7 @@
     "test": "bun --env-file=.env.local test",
     "test:integration": "bun --env-file=.env.local test ./src/**/*.integration.ts",
     "db:seed": "bun run scripts/seed-db.ts",
+    "env:setup": "bunx vercel link",
     "env:pull": "bunx vercel env pull .env.local"
   },
   "dependencies": {

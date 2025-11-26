@@ -39,6 +39,7 @@ export async function GET(request: Request) {
             last_review_applied_timestamp IS NULL
             OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
           )
+        ORDER BY last_review_applied_timestamp ASC NULLS FIRST, created_at DESC
         LIMIT ${limit}
       ` as Word[];
     }
