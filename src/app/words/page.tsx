@@ -104,7 +104,7 @@ export default function WordsPage() {
 
   return (
     <div
-      className="min-h-screen w-screen bg-zinc-50 p-4 font-sans dark:bg-black"
+      className="min-h-screen w-screen bg-zinc-50 p-4 font-sans dark:bg-black select-none"
       onTouchStart={(e) => {
         // Dismiss card if tapping outside
         if (hoveredWord && !(e.target as HTMLElement).closest('[data-word-card]')) {
@@ -196,7 +196,7 @@ export default function WordsPage() {
           onClick={handleDialogClose}
         >
           <div
-            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4"
+            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 select-text"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
