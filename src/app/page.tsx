@@ -231,18 +231,20 @@ export default function Home() {
                 <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
                   {currentWord.chinese}
                 </h1>
-                <div
-                  className={`absolute top-full mt-4 flex flex-col items-center gap-2 text-center transition-opacity duration-75 sm:mt-6 ${
+                <p
+                  className={`absolute top-full mt-4 whitespace-nowrap text-xl text-zinc-900 transition-opacity duration-75 sm:mt-6 sm:text-2xl ${
+                    isTopCard ? (isRevealed ? "opacity-100" : "opacity-50") : "opacity-0"
+                  }`}
+                >
+                  {currentWord.pinyin}
+                </p>
+                <p
+                  className={`absolute top-full mt-16 whitespace-nowrap text-lg text-zinc-900 transition-opacity duration-75 sm:mt-20 sm:text-xl ${
                     isTopCard && isRevealed ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <p className="whitespace-nowrap text-xl text-zinc-900 sm:text-2xl">
-                    {currentWord.pinyin}
-                  </p>
-                  <p className="whitespace-nowrap text-lg text-zinc-900 sm:text-xl">
-                    {getShortDefinition(currentWord.english)}
-                  </p>
-                </div>
+                  {getShortDefinition(currentWord.english)}
+                </p>
               </div>
             </div>
           );
