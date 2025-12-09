@@ -10,6 +10,9 @@ export default function WordsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredWord, setHoveredWord] = useState<Word | null>(null);
+  const [editingWord, setEditingWord] = useState<Word | null>(null);
+  const [englishValue, setEnglishValue] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchWords() {
@@ -32,6 +35,56 @@ export default function WordsPage() {
 
     fetchWords();
   }, []);
+
+  const handleWordClick = (word: Word) => {
+    setEditingWord(word);
+    setEnglishValue(word.english);
+  };
+
+  const handleDialogClose = () => {
+    setEditingWord(null);
+    setEnglishValue("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingWord) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/words/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chinese: editingWord.chinese,
+          english: englishValue,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the word in local state
+        setWords((prevWords) =>
+          prevWords.map((word) =>
+            word.chinese === editingWord.chinese
+              ? { ...word, english: englishValue }
+              : word
+          )
+        );
+        handleDialogClose();
+      } else {
+        alert(`Failed to update word: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error updating word:', err);
+      alert('Failed to update word');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -91,6 +144,9 @@ export default function WordsPage() {
                 onMouseLeave={() => {
                   setHoveredWord(null);
                 }}
+                onClick={() => {
+                  handleWordClick(word);
+                }}
                 onTouchStart={(e) => {
                   e.stopPropagation();
                   setHoveredWord(word);
@@ -132,6 +188,60 @@ export default function WordsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      {editingWord && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={handleDialogClose}
+        >
+          <div
+            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+              Edit Translation
+            </h2>
+            <div className="mb-4">
+              <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                {editingWord.chinese}
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                {editingWord.pinyin}
+              </p>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                English Translation
+              </label>
+              <textarea
+                value={englishValue}
+                onChange={(e) => setEnglishValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                rows={4}
+                required
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={handleDialogClose}
+                  className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
