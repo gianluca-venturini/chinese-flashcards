@@ -49,7 +49,7 @@ async function UserInfoBar() {
           href="/words"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
-          List
+          Words
         </Link>
         <Link
           href="/admin"

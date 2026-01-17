@@ -11,6 +11,7 @@ export default function WordsPage() {
   const [error, setError] = useState<string | null>(null);
   const [hoveredWord, setHoveredWord] = useState<Word | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
+  const [viewMode, setViewMode] = useState<'tiles' | 'table'>('tiles');
   const [englishValue, setEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -119,9 +120,39 @@ export default function WordsPage() {
       }}
     >
       <div className="mx-auto max-w-7xl">
-        <h1 className="mb-6 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-          All Words ({words.length})
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            All Words ({words.length})
+          </h1>
+          <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 overflow-hidden">
+            <button
+              onClick={() => setViewMode('tiles')}
+              className={`p-2 ${viewMode === 'tiles' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+              title="Tiles view"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+              title="Table view"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {viewMode === 'tiles' ? (
+        <>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-1 relative">
           {words.map((word, index) => {
             const categoryColor =
@@ -186,6 +217,33 @@ export default function WordsPage() {
               </p>
             </div>
           </div>
+        )}
+        </>
+        ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse bg-white dark:bg-zinc-800 rounded-lg overflow-hidden shadow">
+            <thead>
+              <tr className="bg-zinc-100 dark:bg-zinc-700">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Chinese</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Pinyin</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
+              </tr>
+            </thead>
+            <tbody>
+              {words.map((word, index) => (
+                <tr
+                  key={`${word.chinese}-${index}`}
+                  className="border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer"
+                  onClick={() => handleWordClick(word)}
+                >
+                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{word.chinese}</td>
+                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{word.pinyin}</td>
+                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{getShortDefinition(word.english)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         )}
       </div>
 
