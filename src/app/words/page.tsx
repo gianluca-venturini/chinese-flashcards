@@ -12,6 +12,10 @@ export default function WordsPage() {
   const [hoveredWord, setHoveredWord] = useState<Word | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [viewMode, setViewMode] = useState<'tiles' | 'table'>('tiles');
+  const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
+  const [suggestedTranslations, setSuggestedTranslations] = useState<Map<string, string>>(new Map());
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -84,6 +88,119 @@ export default function WordsPage() {
       alert('Failed to update word');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const toggleWordSelection = (chinese: string) => {
+    setSelectedWords((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(chinese)) {
+        newSet.delete(chinese);
+      } else {
+        newSet.add(chinese);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedWords.size === words.length) {
+      setSelectedWords(new Set());
+    } else {
+      setSelectedWords(new Set(words.map((w) => w.chinese)));
+    }
+  };
+
+  const handleImproveTranslation = async () => {
+    const selected = words.filter((w) => selectedWords.has(w.chinese));
+    if (selected.length === 0) return;
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch('/api/words/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          words: selected.map((w) => w.chinese),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.translations) {
+        const newTranslations = new Map(suggestedTranslations);
+        for (const translation of data.translations) {
+          newTranslations.set(translation.word, translation.english);
+        }
+        setSuggestedTranslations(newTranslations);
+      } else {
+        alert(`Failed to translate: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error translating words:', err);
+      alert('Failed to translate words');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const selectedWordsWithSuggestions = Array.from(selectedWords).filter(
+    (chinese) => suggestedTranslations.has(chinese)
+  );
+
+  const handleSaveTranslations = async () => {
+    if (selectedWordsWithSuggestions.length === 0) return;
+
+    setIsSaving(true);
+    let savedCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const chinese of selectedWordsWithSuggestions) {
+        const english = suggestedTranslations.get(chinese);
+        if (!english) continue;
+
+        try {
+          const response = await fetch('/api/words/update', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ chinese, english }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            savedCount++;
+            // Update local state
+            setWords((prevWords) =>
+              prevWords.map((word) =>
+                word.chinese === chinese ? { ...word, english } : word
+              )
+            );
+            // Remove from suggested translations
+            setSuggestedTranslations((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(chinese);
+              return newMap;
+            });
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (errorCount > 0) {
+        alert(`Saved ${savedCount} translation(s). Failed to save ${errorCount}.`);
+      }
+      setSelectedWords(new Set());
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -220,30 +337,84 @@ export default function WordsPage() {
         )}
         </>
         ) : (
+        <>
+        <div className="mb-4 flex gap-2">
+          <button
+            onClick={handleImproveTranslation}
+            disabled={selectedWords.size === 0 || isTranslating || isSaving}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isTranslating ? 'Translating...' : `Improve translation ${selectedWords.size > 0 ? `(${selectedWords.size})` : ''}`}
+          </button>
+          {suggestedTranslations.size > 0 && (
+            <button
+              onClick={handleSaveTranslations}
+              disabled={selectedWordsWithSuggestions.length === 0 || isSaving || isTranslating}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Saving...' : `Save translations ${selectedWordsWithSuggestions.length > 0 ? `(${selectedWordsWithSuggestions.length})` : ''}`}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              const word = words.find((w) => selectedWords.has(w.chinese));
+              if (word) handleWordClick(word);
+            }}
+            disabled={selectedWords.size !== 1 || isTranslating || isSaving}
+            className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Edit manually
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white dark:bg-zinc-800 rounded-lg overflow-hidden shadow">
             <thead>
               <tr className="bg-zinc-100 dark:bg-zinc-700">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedWords.size === words.length && words.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Chinese</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Pinyin</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
+                {suggestedTranslations.size > 0 && (
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested English</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {words.map((word, index) => (
                 <tr
                   key={`${word.chinese}-${index}`}
-                  className="border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer"
-                  onClick={() => handleWordClick(word)}
+                  className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  onClick={() => toggleWordSelection(word.chinese)}
                 >
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedWords.has(word.chinese)}
+                      onChange={() => toggleWordSelection(word.chinese)}
+                      className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{word.chinese}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{word.pinyin}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{getShortDefinition(word.english)}</td>
+                  {suggestedTranslations.size > 0 && (
+                    <td className="px-4 py-3 text-green-600 dark:text-green-400">
+                      {suggestedTranslations.get(word.chinese) || ''}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        </>
         )}
       </div>
 
