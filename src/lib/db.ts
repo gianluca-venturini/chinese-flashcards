@@ -12,6 +12,9 @@ export interface Word {
   english: string;
   created_at: Date;
   category: string;
+  i: number;
+  ef: number;
+  n: number;
 }
 
 export interface Review {

@@ -12,6 +12,7 @@ export default function WordsPage() {
   const [hoveredWord, setHoveredWord] = useState<Word | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [viewMode, setViewMode] = useState<'tiles' | 'table'>('tiles');
+  const [showAdvancedColumns, setShowAdvancedColumns] = useState<boolean>(false);
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
   const [suggestedTranslations, setSuggestedTranslations] = useState<Map<string, string>>(new Map());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
@@ -338,7 +339,7 @@ export default function WordsPage() {
         </>
         ) : (
         <>
-        <div className="mb-4 flex gap-2">
+        <div className="mb-4 flex gap-2 items-center sticky top-0 z-10 bg-zinc-50 dark:bg-black py-2">
           <button
             onClick={handleImproveTranslation}
             disabled={selectedWords.size === 0 || isTranslating || isSaving}
@@ -365,6 +366,19 @@ export default function WordsPage() {
           >
             Edit manually
           </button>
+          <div className="ml-auto flex items-center gap-2">
+            <label className="text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer flex items-center gap-2">
+              <span>Show advanced</span>
+              <button
+                onClick={() => setShowAdvancedColumns(!showAdvancedColumns)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showAdvancedColumns ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showAdvancedColumns ? 'translate-x-6' : 'translate-x-1'}`}
+                />
+              </button>
+            </label>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse bg-white dark:bg-zinc-800 rounded-lg overflow-hidden shadow">
@@ -383,6 +397,85 @@ export default function WordsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
                 {suggestedTranslations.size > 0 && (
                   <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested English</th>
+                )}
+                {showAdvancedColumns && (
+                  <>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                      <span className="flex items-center gap-1">
+                        Created
+                        <span className="relative cursor-help text-zinc-400 group">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-48 p-2 text-xs font-normal text-white bg-zinc-800 dark:bg-zinc-700 rounded shadow-lg">
+                            Date when the word was added
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                      <span className="flex items-center gap-1">
+                        Category
+                        <span className="relative cursor-help text-zinc-400 group">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-48 p-2 text-xs font-normal text-white bg-zinc-800 dark:bg-zinc-700 rounded shadow-lg">
+                            Semantic category for color coding
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                      <span className="flex items-center gap-1">
+                        Interval
+                        <span className="relative cursor-help text-zinc-400 group">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-48 p-2 text-xs font-normal text-white bg-zinc-800 dark:bg-zinc-700 rounded shadow-lg">
+                            Days until next review (SM-2 algorithm)
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                      <span className="flex items-center gap-1">
+                        EF
+                        <span className="relative cursor-help text-zinc-400 group">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-56 p-2 text-xs font-normal text-white bg-zinc-800 dark:bg-zinc-700 rounded shadow-lg">
+                            Easiness Factor (1.3-2.5+): higher = easier, shown less often
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                      <span className="flex items-center gap-1">
+                        Reps
+                        <span className="relative cursor-help text-zinc-400 group">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                          <span className="absolute left-1/2 -translate-x-1/2 top-6 z-20 hidden group-hover:block w-56 p-2 text-xs font-normal text-white bg-zinc-800 dark:bg-zinc-700 rounded shadow-lg">
+                            Consecutive successful reviews (resets to 0 on failure)
+                          </span>
+                        </span>
+                      </span>
+                    </th>
+                  </>
                 )}
               </tr>
             </thead>
@@ -408,6 +501,25 @@ export default function WordsPage() {
                     <td className="px-4 py-3 text-green-600 dark:text-green-400">
                       {suggestedTranslations.get(word.chinese) || ''}
                     </td>
+                  )}
+                  {showAdvancedColumns && (
+                    <>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {new Date(word.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {word.category || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {word.i} days
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {word.ef?.toFixed(2) || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {word.n}
+                      </td>
+                    </>
                   )}
                 </tr>
               ))}
