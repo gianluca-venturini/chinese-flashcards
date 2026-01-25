@@ -6,7 +6,7 @@ import ResetStatsButton from "../components/ResetStatsButton";
 
 export default function AdminPage() {
   return (
-    <div className="flex min-h-screen w-screen items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
+    <div className="flex flex-1 w-full items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
       <div className="max-w-2xl w-full">
         <h1 className="mb-8 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
           Admin Panel

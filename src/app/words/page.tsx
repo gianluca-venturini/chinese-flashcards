@@ -207,7 +207,7 @@ export default function WordsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
+      <div className="flex flex-1 w-full items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-zinc-600 dark:text-zinc-400">Loading words...</div>
       </div>
     );
@@ -215,7 +215,7 @@ export default function WordsPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
+      <div className="flex flex-1 w-full items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-red-600 dark:text-red-400">{error}</div>
       </div>
     );
@@ -223,7 +223,7 @@ export default function WordsPage() {
 
   return (
     <div
-      className="min-h-screen w-screen bg-zinc-50 p-4 font-sans dark:bg-black select-none"
+      className="flex-1 w-full overflow-auto bg-zinc-50 p-4 font-sans dark:bg-black select-none"
       onTouchStart={(e) => {
         // Dismiss card if tapping outside
         if (hoveredWord && !(e.target as HTMLElement).closest('[data-word-card]')) {

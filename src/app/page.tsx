@@ -169,7 +169,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-zinc-600 dark:text-zinc-400">Loading flashcards...</div>
       </div>
     );
@@ -177,7 +177,7 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-red-600 dark:text-red-400">
           {error}
         </div>
@@ -187,14 +187,14 @@ export default function Home() {
 
   if (nextWords.length === 0) {
     return (
-      <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+    <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
       <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
         {nextWords.map((currentWord, index) => {
           const isTopCard = index === 0;

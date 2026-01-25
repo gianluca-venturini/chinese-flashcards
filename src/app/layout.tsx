@@ -81,7 +81,9 @@ export default function RootLayout({
         <StackProvider app={stackServerApp}>
           <StackTheme>
             <UserInfoBar />
-            {children}
+            <div className="flex-1 flex flex-col min-h-0">
+              {children}
+            </div>
           </StackTheme>
         </StackProvider>
       </body>
