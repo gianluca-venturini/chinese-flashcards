@@ -31,6 +31,22 @@ const BatchTranslationSchema = z.object({
 
 export type TranslationResult = z.infer<typeof TranslationSchema>;
 
+const PinyinSchema = z.object({
+  pinyin: z.string().describe('The pinyin with tone marks (e.g. nǐ hǎo)'),
+});
+
+export async function generatePinyin(chinese: string): Promise<string> {
+  const { object } = await generateObject({
+    model: openai('gpt-4.1'),
+    schema: PinyinSchema,
+    temperature: 0,
+    system: 'You are a Chinese language expert. Given a Chinese word or phrase, return its pinyin with tone marks (e.g. nǐ hǎo). Return only the pinyin, nothing else.',
+    prompt: chinese,
+  });
+
+  return object.pinyin;
+}
+
 export async function translateChineseWords(
   words: string[],
 ): Promise<TranslationResult[]> {

@@ -19,6 +19,10 @@ export default function WordsPage() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [newChinese, setNewChinese] = useState<string>("");
+  const [newEnglish, setNewEnglish] = useState<string>("");
+  const [isCreating, setIsCreating] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchWords() {
@@ -205,6 +209,32 @@ export default function WordsPage() {
     }
   };
 
+  const handleAddWord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+    try {
+      const response = await fetch('/api/words/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chinese: newChinese, english: newEnglish }),
+      });
+      const data = await response.json();
+      if (data.success && data.word) {
+        setWords((prev) => [data.word, ...prev]);
+        setShowAddModal(false);
+        setNewChinese("");
+        setNewEnglish("");
+      } else {
+        alert(`Failed to add word: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error creating word:', err);
+      alert('Failed to add word');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-1 w-full items-center justify-center bg-zinc-50 p-4 font-sans dark:bg-black">
@@ -242,6 +272,13 @@ export default function WordsPage() {
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
             All Words ({words.length})
           </h1>
+          <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Add Word
+          </button>
           <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 overflow-hidden">
             <button
               onClick={() => setViewMode('tiles')}
@@ -266,6 +303,7 @@ export default function WordsPage() {
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
+          </div>
           </div>
         </div>
 
@@ -529,6 +567,63 @@ export default function WordsPage() {
         </>
         )}
       </div>
+
+      {/* Add Word Modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 select-text"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+              Add Word
+            </h2>
+            <form onSubmit={handleAddWord}>
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Chinese
+              </label>
+              <input
+                type="text"
+                value={newChinese}
+                onChange={(e) => setNewChinese(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                required
+                autoFocus
+              />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                English
+              </label>
+              <input
+                type="text"
+                value={newEnglish}
+                onChange={(e) => setNewEnglish(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                required
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                  disabled={isCreating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isCreating}
+                >
+                  {isCreating ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Dialog */}
       {editingWord && (
