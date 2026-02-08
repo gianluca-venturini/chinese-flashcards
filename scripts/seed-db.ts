@@ -25,6 +25,8 @@ async function seed() {
         i INTEGER DEFAULT 1,
         last_review_applied_timestamp TIMESTAMP WITH TIME ZONE,
         category TEXT,
+        example_chinese TEXT,
+        example_pinyin TEXT,
         PRIMARY KEY (chinese, user_id),
         CONSTRAINT fk_user
           FOREIGN KEY (user_id)
@@ -32,6 +34,10 @@ async function seed() {
           ON DELETE CASCADE
       )
     `;
+
+    // Add columns for existing installs
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_chinese TEXT`;
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_pinyin TEXT`;
 
     console.log('Creating reviews table...');
     await sql`

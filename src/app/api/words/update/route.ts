@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { chinese, english } = body;
+    const { chinese, english, example_chinese, example_pinyin } = body;
 
     // Validate required parameters
     if (!chinese || typeof chinese !== 'string') {
@@ -33,9 +33,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (!english || typeof english !== 'string') {
+    // Build update object with only provided fields
+    const updates: Record<string, string> = {};
+    if (english !== undefined && english !== null) updates.english = english;
+    if (example_chinese !== undefined && example_chinese !== null) updates.example_chinese = example_chinese;
+    if (example_pinyin !== undefined && example_pinyin !== null) updates.example_pinyin = example_pinyin;
+
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json(
-        { error: 'english parameter is required and must be a string', success: false },
+        { error: 'At least one updatable field (english, example_chinese, example_pinyin) must be provided', success: false },
         { status: 400 }
       );
     }
@@ -54,10 +60,10 @@ export async function PATCH(request: NextRequest) {
         throw new WordNotFoundError();
       }
 
-      // Update the English translation
+      // Update the word with dynamic SET clause
       await sql`
         UPDATE words
-        SET english = ${english}
+        SET ${sql(updates)}
         WHERE chinese = ${chinese} AND user_id = ${user.id}
       `;
     });
@@ -82,4 +88,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-

@@ -15,6 +15,8 @@ export interface Word {
   i: number;
   ef: number;
   n: number;
+  example_chinese?: string;
+  example_pinyin?: string;
 }
 
 export interface Review {

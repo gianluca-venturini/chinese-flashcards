@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     if (all) {
       // Fetch all words for the user
       words = await sql`
-      SELECT chinese, pinyin, english, created_at, category, i, ef, n
+      SELECT chinese, pinyin, english, created_at, category, i, ef, n, example_chinese, example_pinyin
       FROM words
       WHERE user_id = ${user.id}
       ORDER BY created_at DESC
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       const limit = 10;
       // Fetch words that are due for review
       words = await sql`
-        SELECT chinese, pinyin, english, created_at, category
+        SELECT chinese, pinyin, english, created_at, category, example_chinese, example_pinyin
         FROM words
         WHERE user_id = ${user.id}
           AND (

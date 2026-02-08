@@ -245,6 +245,37 @@ export default function Home() {
                 >
                   {getShortDefinition(currentWord.english)}
                 </p>
+                {currentWord.example_chinese && (
+                  <p
+                    className={`absolute top-full mt-28 text-sm text-zinc-700 transition-opacity duration-75 sm:mt-36 ${
+                      isTopCard ? "opacity-50" : "opacity-0"
+                    }`}
+                  >
+                    <span>{(() => {
+                      const idx = currentWord.example_chinese.indexOf(currentWord.chinese);
+                      if (idx === -1) return currentWord.example_chinese;
+                      return <>{currentWord.example_chinese.slice(0, idx)}<strong>{currentWord.chinese}</strong>{currentWord.example_chinese.slice(idx + currentWord.chinese.length)}</>;
+                    })()}</span>
+                    <span className="ml-2 text-xs text-zinc-500">{(() => {
+                      if (!currentWord.example_pinyin) return null;
+                      const text = currentWord.example_pinyin;
+                      const search = currentWord.pinyin;
+                      const textNoSpaces = text.replace(/ /g, '').toLowerCase();
+                      const searchNoSpaces = search.replace(/ /g, '').toLowerCase();
+                      const idx = textNoSpaces.indexOf(searchNoSpaces);
+                      if (idx === -1) return text;
+                      // Map spaceless match indices back to original string positions
+                      let spaceless = 0, startOrig = -1, endOrig = -1;
+                      for (let i = 0; i <= text.length; i++) {
+                        if (spaceless === idx && startOrig === -1) startOrig = i;
+                        if (spaceless === idx + searchNoSpaces.length) { endOrig = i; break; }
+                        if (i < text.length && text[i] !== ' ') spaceless++;
+                      }
+                      if (startOrig === -1 || endOrig === -1) return text;
+                      return <>{text.slice(0, startOrig)}<strong>{text.slice(startOrig, endOrig)}</strong>{text.slice(endOrig)}</>;
+                    })()}</span>
+                  </p>
+                )}
               </div>
             </div>
           );

@@ -33,3 +33,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+strong {
+  color: black;
+}

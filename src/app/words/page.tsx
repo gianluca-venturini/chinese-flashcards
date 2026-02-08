@@ -15,7 +15,9 @@ export default function WordsPage() {
   const [showAdvancedColumns, setShowAdvancedColumns] = useState<boolean>(false);
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
   const [suggestedTranslations, setSuggestedTranslations] = useState<Map<string, string>>(new Map());
+  const [suggestedExamples, setSuggestedExamples] = useState<Map<string, { example_chinese: string; example_pinyin: string }>>(new Map());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -151,8 +153,46 @@ export default function WordsPage() {
     }
   };
 
+  const handleAddExamples = async () => {
+    const selected = words.filter((w) => selectedWords.has(w.chinese));
+    if (selected.length === 0) return;
+
+    setIsGeneratingExamples(true);
+    try {
+      const response = await fetch('/api/words/examplify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          words: selected.map((w) => w.chinese),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.examples) {
+        const newExamples = new Map(suggestedExamples);
+        for (const example of data.examples) {
+          newExamples.set(example.word, {
+            example_chinese: example.example_chinese,
+            example_pinyin: example.example_pinyin,
+          });
+        }
+        setSuggestedExamples(newExamples);
+      } else {
+        alert(`Failed to generate examples: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error generating examples:', err);
+      alert('Failed to generate examples');
+    } finally {
+      setIsGeneratingExamples(false);
+    }
+  };
+
   const selectedWordsWithSuggestions = Array.from(selectedWords).filter(
-    (chinese) => suggestedTranslations.has(chinese)
+    (chinese) => suggestedTranslations.has(chinese) || suggestedExamples.has(chinese)
   );
 
   const handleSaveTranslations = async () => {
@@ -165,7 +205,15 @@ export default function WordsPage() {
     try {
       for (const chinese of selectedWordsWithSuggestions) {
         const english = suggestedTranslations.get(chinese);
-        if (!english) continue;
+        const example = suggestedExamples.get(chinese);
+        if (!english && !example) continue;
+
+        const payload: Record<string, string> = { chinese };
+        if (english) payload.english = english;
+        if (example) {
+          payload.example_chinese = example.example_chinese;
+          payload.example_pinyin = example.example_pinyin;
+        }
 
         try {
           const response = await fetch('/api/words/update', {
@@ -173,21 +221,33 @@ export default function WordsPage() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ chinese, english }),
+            body: JSON.stringify(payload),
           });
 
           const data = await response.json();
 
           if (data.success) {
             savedCount++;
-            // Update local state
+            // Update local state with only changed fields
             setWords((prevWords) =>
-              prevWords.map((word) =>
-                word.chinese === chinese ? { ...word, english } : word
-              )
+              prevWords.map((word) => {
+                if (word.chinese !== chinese) return word;
+                const updated = { ...word };
+                if (english) updated.english = english;
+                if (example) {
+                  updated.example_chinese = example.example_chinese;
+                  updated.example_pinyin = example.example_pinyin;
+                }
+                return updated;
+              })
             );
-            // Remove from suggested translations
+            // Remove from suggested maps
             setSuggestedTranslations((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(chinese);
+              return newMap;
+            });
+            setSuggestedExamples((prev) => {
               const newMap = new Map(prev);
               newMap.delete(chinese);
               return newMap;
@@ -201,7 +261,7 @@ export default function WordsPage() {
       }
 
       if (errorCount > 0) {
-        alert(`Saved ${savedCount} translation(s). Failed to save ${errorCount}.`);
+        alert(`Saved ${savedCount} word(s). Failed to save ${errorCount}.`);
       }
       setSelectedWords(new Set());
     } finally {
@@ -380,18 +440,25 @@ export default function WordsPage() {
         <div className="mb-4 flex gap-2 items-center sticky top-0 z-10 bg-zinc-50 dark:bg-black py-2">
           <button
             onClick={handleImproveTranslation}
-            disabled={selectedWords.size === 0 || isTranslating || isSaving}
+            disabled={selectedWords.size === 0 || isTranslating || isSaving || isGeneratingExamples}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTranslating ? 'Translating...' : `Improve translation ${selectedWords.size > 0 ? `(${selectedWords.size})` : ''}`}
           </button>
-          {suggestedTranslations.size > 0 && (
+          <button
+            onClick={handleAddExamples}
+            disabled={selectedWords.size === 0 || isGeneratingExamples || isSaving || isTranslating}
+            className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingExamples ? 'Generating...' : `Add examples ${selectedWords.size > 0 ? `(${selectedWords.size})` : ''}`}
+          </button>
+          {(suggestedTranslations.size > 0 || suggestedExamples.size > 0) && (
             <button
               onClick={handleSaveTranslations}
-              disabled={selectedWordsWithSuggestions.length === 0 || isSaving || isTranslating}
+              disabled={selectedWordsWithSuggestions.length === 0 || isSaving || isTranslating || isGeneratingExamples}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSaving ? 'Saving...' : `Save translations ${selectedWordsWithSuggestions.length > 0 ? `(${selectedWordsWithSuggestions.length})` : ''}`}
+              {isSaving ? 'Saving...' : `Save ${selectedWordsWithSuggestions.length > 0 ? `(${selectedWordsWithSuggestions.length})` : ''}`}
             </button>
           )}
           <button
@@ -435,6 +502,9 @@ export default function WordsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
                 {suggestedTranslations.size > 0 && (
                   <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested English</th>
+                )}
+                {suggestedExamples.size > 0 && (
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested Example</th>
                 )}
                 {showAdvancedColumns && (
                   <>
@@ -513,6 +583,7 @@ export default function WordsPage() {
                         </span>
                       </span>
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Example</th>
                   </>
                 )}
               </tr>
@@ -540,6 +611,16 @@ export default function WordsPage() {
                       {suggestedTranslations.get(word.chinese) || ''}
                     </td>
                   )}
+                  {suggestedExamples.size > 0 && (
+                    <td className="px-4 py-3 text-purple-600 dark:text-purple-400">
+                      {suggestedExamples.has(word.chinese) ? (
+                        <>
+                          <span>{suggestedExamples.get(word.chinese)!.example_chinese}</span>
+                          <span className="ml-2 text-xs text-purple-400 dark:text-purple-500">{suggestedExamples.get(word.chinese)!.example_pinyin}</span>
+                        </>
+                      ) : ''}
+                    </td>
+                  )}
                   {showAdvancedColumns && (
                     <>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
@@ -556,6 +637,14 @@ export default function WordsPage() {
                       </td>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
                         {word.n}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
+                        {word.example_chinese ? (
+                          <>
+                            <span>{word.example_chinese}</span>
+                            <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">{word.example_pinyin}</span>
+                          </>
+                        ) : '-'}
                       </td>
                     </>
                   )}

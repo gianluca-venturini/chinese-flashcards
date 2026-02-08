@@ -47,6 +47,49 @@ export async function generatePinyin(chinese: string): Promise<string> {
   return object.pinyin;
 }
 
+const EXAMPLE_SYSTEM_PROMPT = `
+You are an expert Chinese teacher creating example sentences for language learners.
+
+Your job: given a list of target Chinese words and a list of known vocabulary, create a short example sentence for each target word.
+
+Rules:
+- Keep sentences short: 4-10 characters ideal, 15 characters maximum
+- Prefer using words from the known vocabulary list when possible
+- Sentences must be natural and grammatically correct
+- Each sentence must contain the target word
+- Return sentences in the same order as the input words
+`;
+
+const ExampleSchema = z.object({
+  word: z.string().describe('The original Chinese word'),
+  example_chinese: z.string().describe('A short example sentence in Chinese'),
+});
+
+const BatchExampleSchema = z.object({
+  sentences: z.array(ExampleSchema),
+});
+
+export type ExampleResult = z.infer<typeof ExampleSchema>;
+
+export async function generateExampleSentences(
+  targetWords: string[],
+  knownWords: string[],
+): Promise<ExampleResult[]> {
+  if (targetWords.length === 0) {
+    return [];
+  }
+
+  const { object } = await generateObject({
+    model: openai('gpt-4.1'),
+    schema: BatchExampleSchema,
+    temperature: 0.7,
+    system: EXAMPLE_SYSTEM_PROMPT,
+    prompt: `Target words:\n${targetWords.map((w, i) => `${i + 1}. ${w}`).join('\n')}\n\nKnown vocabulary:\n${knownWords.join(', ')}`,
+  });
+
+  return object.sentences;
+}
+
 export async function translateChineseWords(
   words: string[],
 ): Promise<TranslationResult[]> {
