@@ -247,8 +247,8 @@ export default function Home() {
                 </p>
                 {currentWord.example_chinese && (
                   <p
-                    className={`absolute top-full mt-28 w-[80vw] max-w-[600px] text-center text-base text-zinc-700 transition-opacity duration-75 sm:mt-36 sm:text-lg ${
-                      isTopCard ? "opacity-50" : "opacity-0"
+                    className={`absolute top-full mt-28 w-[80vw] max-w-[600px] text-center text-lg text-zinc-800 transition-opacity duration-75 sm:mt-36 sm:text-xl ${
+                      isTopCard ? "opacity-70" : "opacity-0"
                     }`}
                   >
                     <span className="block">{(() => {
@@ -256,7 +256,7 @@ export default function Home() {
                       if (idx === -1) return currentWord.example_chinese;
                       return <>{currentWord.example_chinese.slice(0, idx)}<strong>{currentWord.chinese}</strong>{currentWord.example_chinese.slice(idx + currentWord.chinese.length)}</>;
                     })()}</span>
-                    <span className="block mt-1 text-sm text-zinc-500 sm:text-base">{(() => {
+                    <span className="block mt-1 text-base text-zinc-700 sm:text-lg">{(() => {
                       if (!currentWord.example_pinyin) return null;
                       const text = currentWord.example_pinyin;
                       const search = currentWord.pinyin;
