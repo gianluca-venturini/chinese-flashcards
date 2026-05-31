@@ -1,56 +1,86 @@
-import { NextResponse } from 'next/server';
-import { sql, Word } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
 import { stackServerApp } from '@/stack';
+import { type Word } from '@/lib/schema';
+import { rowToWord, PutBodySchema } from './wordMapper';
 
-export async function GET(request: Request) {
+export { rowToWord, PutBodySchema };
+
+export async function GET() {
   try {
-    // Check if user is authenticated
     const user = await stackServerApp.getUser();
-
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', success: false },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized', success: false }, { status: 401 });
     }
 
-    // Extract query parameters
-    const { searchParams } = new URL(request.url);
-    const all = searchParams.get('all') === 'true';
-
-    // Fetch words for the authenticated user
-    let words: Word[];
-    if (all) {
-      // Fetch all words for the user
-      words = await sql`
-      SELECT chinese, pinyin, english, created_at, category, i, ef, n, example_chinese, example_pinyin
-      FROM words
-      WHERE user_id = ${user.id}
-      ORDER BY created_at DESC
-      ` as Word[];
-    } else {
-      const limit = 10;
-      // Fetch words that are due for review
-      words = await sql`
-        SELECT chinese, pinyin, english, created_at, category, example_chinese, example_pinyin
-        FROM words
-        WHERE user_id = ${user.id}
-          AND (
-            last_review_applied_timestamp IS NULL
-            OR last_review_applied_timestamp + (i * INTERVAL '1 day') < NOW()
-          )
-        ORDER BY last_review_applied_timestamp ASC NULLS FIRST, created_at DESC
-        LIMIT ${limit}
-      ` as Word[];
+    const rows = await sql`SELECT * FROM words WHERE user_id = ${user.id}`;
+    const words: Word[] = [];
+    for (const row of rows) {
+      try {
+        words.push(rowToWord(row as Record<string, unknown>));
+      } catch (e) {
+        console.warn('Skipping malformed word row:', row, e);
+      }
     }
 
     return NextResponse.json({ words, success: true });
   } catch (error) {
     console.error('Error fetching words:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch words', success: false },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch words', success: false }, { status: 500 });
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await stackServerApp.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized', success: false }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const parsed = PutBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Invalid body', success: false },
+        { status: 400 },
+      );
+    }
+
+    const { words } = parsed.data;
+    if (words.length === 0) {
+      return NextResponse.json({ success: true });
+    }
+
+    await sql.begin(async (sql) => {
+      for (const word of words) {
+        await sql`
+          INSERT INTO words (
+            chinese, user_id, pinyin, english, created_at, n, ef, i,
+            category, example_chinese, example_pinyin, last_reviewed_at, updated_at
+          ) VALUES (
+            ${word.chinese}, ${user.id}, ${word.pinyin}, ${word.english},
+            ${word.created_at}, ${word.n}, ${word.ef}, ${word.i},
+            ${word.category}, ${word.example_chinese}, ${word.example_pinyin},
+            ${word.last_reviewed_at}, ${word.updated_at}
+          )
+          ON CONFLICT (chinese, user_id) DO UPDATE SET
+            pinyin = EXCLUDED.pinyin,
+            english = EXCLUDED.english,
+            n = EXCLUDED.n,
+            ef = EXCLUDED.ef,
+            i = EXCLUDED.i,
+            category = EXCLUDED.category,
+            example_chinese = EXCLUDED.example_chinese,
+            example_pinyin = EXCLUDED.example_pinyin,
+            last_reviewed_at = EXCLUDED.last_reviewed_at,
+            updated_at = EXCLUDED.updated_at
+        `;
+      }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error upserting words:', error);
+    return NextResponse.json({ error: 'Failed to upsert words', success: false }, { status: 500 });
+  }
+}

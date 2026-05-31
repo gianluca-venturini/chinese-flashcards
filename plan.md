@@ -137,14 +137,14 @@ Every function operates on batches. Results are arrays of objects keyed by `word
 ### Step 9 — Server entity endpoints
 
 **Rewrite** `src/app/api/words/route.ts`:
-- [ ] `GET()` — auth check; `SELECT *` for the authenticated user; zod-parses each row (logs + skips malformed); returns `{ words: Word[] }`. No more `?all`, no due filtering.
-- [ ] `PUT(request)` — auth check; zod-parses body as `{ words: Word[] }`; upserts every word in a single transaction with `INSERT ... ON CONFLICT (chinese, user_id) DO UPDATE SET ...` (Word PK is `chinese` scoped to `user_id`); returns `{ success: true }`. An empty array is a no-op.
-- [ ] Internal `rowToWord(row): Word` — pure mapper from a Postgres row to the zod-shaped Word (exported for tests).
+- [x] `GET()` — auth check; `SELECT *` for the authenticated user; zod-parses each row (logs + skips malformed); returns `{ words: Word[] }`. No more `?all`, no due filtering.
+- [x] `PUT(request)` — auth check; zod-parses body as `{ words: Word[] }`; upserts every word in a single transaction with `INSERT ... ON CONFLICT (chinese, user_id) DO UPDATE SET ...` (Word PK is `chinese` scoped to `user_id`); returns `{ success: true }`. An empty array is a no-op.
+- [x] Internal `rowToWord(row): Word` — pure mapper from a Postgres row to the zod-shaped Word (exported for tests). Extracted to `wordMapper.ts` to keep it importable without server-only dependencies.
 
 **Create** `src/app/api/words/route.test.ts`:
-- [ ] `rowToWord` produces a value that parses through `WordSchema`.
-- [ ] `rowToWord` maps `last_review_applied_timestamp`-era rows (no `updated_at`, no `last_reviewed_at`) to `null` for the new fields.
-- [ ] The PUT body schema accepts `{ words: [] }` and `{ words: [w1, w2, ...] }`, rejects a bare Word object.
+- [x] `rowToWord` produces a value that parses through `WordSchema`.
+- [x] `rowToWord` maps `last_review_applied_timestamp`-era rows (no `updated_at`, no `last_reviewed_at`) to `null` for the new fields.
+- [x] The PUT body schema accepts `{ words: [] }` and `{ words: [w1, w2, ...] }`, rejects a bare Word object.
 
 SQL upserts and auth checks are exercised by manual smoke tests (matches existing convention).
 
