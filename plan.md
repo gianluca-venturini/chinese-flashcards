@@ -168,10 +168,10 @@ Tests: none added at the route level (LLM-calling routes are not unit-tested in 
 ### Step 11 — Postgres schema cleanup
 
 **Modify** `scripts/seed-db.ts`:
-- [ ] Add `updated_at TIMESTAMP WITH TIME ZONE` (nullable, no default).
-- [ ] Add `last_reviewed_at TIMESTAMP WITH TIME ZONE` (nullable, no default).
-- [ ] Drop `last_review_applied_timestamp` from the CREATE TABLE.
-- [ ] Remove the `reviews` table CREATE entirely.
+- [x] Add `updated_at TIMESTAMP WITH TIME ZONE` (nullable, no default).
+- [x] Add `last_reviewed_at TIMESTAMP WITH TIME ZONE` (nullable, no default).
+- [x] Drop `last_review_applied_timestamp` from the CREATE TABLE.
+- [x] Remove the `reviews` table CREATE entirely.
 
 Tests: none (existing convention — `seed-db.ts` is exercised by `bun run db:seed` manually).
 

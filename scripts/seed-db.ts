@@ -18,15 +18,16 @@ async function seed() {
         chinese TEXT NOT NULL,
         user_id TEXT NOT NULL,
         pinyin TEXT NOT NULL,
-        english TEXT NOT NULL,
+        english TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         n INTEGER DEFAULT 0,
         ef DOUBLE PRECISION DEFAULT 2.5,
         i INTEGER DEFAULT 1,
-        last_review_applied_timestamp TIMESTAMP WITH TIME ZONE,
         category TEXT,
         example_chinese TEXT,
         example_pinyin TEXT,
+        last_reviewed_at TIMESTAMP WITH TIME ZONE,
+        updated_at TIMESTAMP WITH TIME ZONE,
         PRIMARY KEY (chinese, user_id),
         CONSTRAINT fk_user
           FOREIGN KEY (user_id)
@@ -38,21 +39,9 @@ async function seed() {
     // Add columns for existing installs
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_chinese TEXT`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_pinyin TEXT`;
-
-    console.log('Creating reviews table...');
-    await sql`
-      CREATE TABLE IF NOT EXISTS reviews (
-        id UUID PRIMARY KEY,
-        chinese TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        q INTEGER NOT NULL,
-        CONSTRAINT fk_word
-          FOREIGN KEY (chinese, user_id)
-          REFERENCES words(chinese, user_id)
-          ON DELETE CASCADE
-      )
-    `;
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE words ALTER COLUMN english DROP NOT NULL`;
 
     console.log('✅ Database seeded successfully!');
   } catch (error) {
@@ -62,4 +51,3 @@ async function seed() {
 }
 
 void seed();
-
