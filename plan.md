@@ -151,17 +151,17 @@ SQL upserts and auth checks are exercised by manual smoke tests (matches existin
 ### Step 10 — Stateless LLM helper endpoints
 
 **Rewrite** `src/app/api/words/classify/route.ts`:
-- [ ] `POST(request)` — auth check; zod-parses `{ chinese: string[] }`; calls `classifyChineseWords`; returns `{ classifications: { word; category }[] }`. No DB access.
+- [x] `POST(request)` — auth check; zod-parses `{ chinese: string[] }`; calls `classifyChineseWords`; returns `{ classifications: { word; category }[] }`. No DB access.
 
 **Modify** `src/app/api/words/examplify/route.ts`:
-- [ ] `POST(request)` — auth check; zod-parses `{ words: string[], knownWords: string[] }` (knownWords now comes from the client, not the DB); calls `generateExampleSentences` + `generatePinyin`; returns examples.
-- [ ] Delete the existing Postgres lookup for the user's vocabulary.
+- [x] `POST(request)` — auth check; zod-parses `{ words: string[], knownWords: string[] }` (knownWords now comes from the client, not the DB); calls `generateExampleSentences` + `generatePinyin`; returns examples.
+- [x] Delete the existing Postgres lookup for the user's vocabulary.
 
 **Leave** `src/app/api/words/translate/route.ts`:
-- [ ] No changes — already stateless and already uses zod.
+- [x] No changes — already stateless and already uses zod.
 
 **Create** `src/app/api/words/pinyin/route.ts`:
-- [ ] `POST(request)` — auth check; zod-parses `{ chinese: string[] }`; calls the existing single-string `generatePinyin` helper in `src/lib/translate.ts` via `Promise.all` over the batch; returns `{ pinyins: { word: string; pinyin: string }[] }`. No DB.
+- [x] `POST(request)` — auth check; zod-parses `{ chinese: string[] }`; calls the existing single-string `generatePinyin` helper in `src/lib/translate.ts` via `Promise.all` over the batch; returns `{ pinyins: { word: string; pinyin: string }[] }`. No DB.
 
 Tests: none added at the route level (LLM-calling routes are not unit-tested in this codebase). Existing `src/lib/translate.ts` and `src/lib/categories.ts` are unchanged and stay covered by their current usage.
 
