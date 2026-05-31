@@ -128,11 +128,11 @@ Every function operates on batches. Results are arrays of objects keyed by `word
 ### Step 8 — Sign-out helper
 
 **Create** `src/lib/signOut.ts`:
-- [ ] `signOutAndWipe(): Promise<void>` — calls `storage.clearAll()`, then sets `window.location.href = "/handler/sign-out"`.
+- [x] `signOutAndWipe(): Promise<void>` — calls `storage.clearAll()`, then sets `window.location.href = "/handler/sign-out"`.
 
 **Create** `src/lib/signOut.test.ts` (fake-indexeddb + stubbed `window.location`):
-- [ ] After the call, `storage.getAllWords()` returns `[]`.
-- [ ] `window.location.href` ends pointing at the Stack sign-out handler.
+- [x] After the call, `storage.getAllWords()` returns `[]`.
+- [x] `window.location.href` ends pointing at the Stack sign-out handler.
 
 ### Step 9 — Server entity endpoints
 
