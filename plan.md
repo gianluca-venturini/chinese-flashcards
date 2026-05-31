@@ -56,14 +56,14 @@ Steps are ordered so each builds on the previous: schema → pure logic → stor
 ### Step 3 — Due-word filter
 
 **Create** `src/lib/dueWords.ts`:
-- [ ] `isWordDue(word: Word, now: Date): boolean` — `last_reviewed_at == null` OR `now − last_reviewed_at ≥ i days`.
-- [ ] `getDueWords(words: Word[], now: Date, limit?: number): Word[]` — filters, sorts (nulls first, then ascending `last_reviewed_at`), applies `limit`.
+- [x] `isWordDue(word: Word, now: Date): boolean` — `last_reviewed_at == null` OR `now − last_reviewed_at ≥ i days`.
+- [x] `getDueWords(words: Word[], now: Date, limit?: number): Word[]` — filters, sorts (nulls first, then ascending `last_reviewed_at`), applies `limit`.
 
 **Create** `src/lib/dueWords.test.ts`:
-- [ ] Never-reviewed (`last_reviewed_at == null`) is always due.
-- [ ] Exactly `i` days since last review is due; less than `i` days is not.
-- [ ] Sort order is nulls-first, then ascending `last_reviewed_at`.
-- [ ] `limit` truncates correctly.
+- [x] Never-reviewed (`last_reviewed_at == null`) is always due.
+- [x] Exactly `i` days since last review is due; less than `i` days is not.
+- [x] Sort order is nulls-first, then ascending `last_reviewed_at`.
+- [x] `limit` truncates correctly.
 
 ### Step 4 — IndexedDB storage
 
