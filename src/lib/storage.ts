@@ -88,6 +88,20 @@ export async function resetSr(): Promise<Word[]> {
   });
 }
 
+export async function putWordsRaw(words: Word[]): Promise<void> {
+  if (words.length === 0) return;
+  const validated = words.map((w) => WordSchema.parse(w));
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const store = tx.objectStore(STORE);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+    for (const w of validated) store.put(w);
+  });
+}
+
 export async function clearAll(): Promise<void> {
   if (dbPromise) {
     const db = await dbPromise;

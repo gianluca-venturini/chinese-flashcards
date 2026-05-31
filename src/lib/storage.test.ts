@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, test, beforeEach } from 'bun:test';
-import { getAllWords, getWord, putWord, resetSr, clearAll } from './storage';
+import { getAllWords, getWord, putWord, putWordsRaw, resetSr, clearAll } from './storage';
 import { newWord, SR_DEFAULTS } from './schema';
 
 beforeEach(async () => {
@@ -95,6 +95,30 @@ describe('resetSr', () => {
     expect(fetched!.n).toBe(SR_DEFAULTS.n);
     expect(fetched!.ef).toBe(SR_DEFAULTS.ef);
     expect(fetched!.i).toBe(SR_DEFAULTS.i);
+  });
+});
+
+describe('putWordsRaw', () => {
+  test('preserves updated_at — does not bump to now', async () => {
+    const stale = { ...WORD_A, updated_at: '2020-01-01T00:00:00.000Z' };
+    await putWordsRaw([stale]);
+    const result = await getWord(stale.chinese);
+    expect(result!.updated_at).toBe('2020-01-01T00:00:00.000Z');
+  });
+
+  test('writes multiple words in one call', async () => {
+    const a = { ...WORD_A, updated_at: '2020-01-01T00:00:00.000Z' };
+    const b = { ...WORD_B, updated_at: '2021-06-15T12:00:00.000Z' };
+    await putWordsRaw([a, b]);
+    const all = await getAllWords();
+    expect(all).toHaveLength(2);
+    expect(all.find((w) => w.chinese === WORD_A.chinese)!.updated_at).toBe('2020-01-01T00:00:00.000Z');
+    expect(all.find((w) => w.chinese === WORD_B.chinese)!.updated_at).toBe('2021-06-15T12:00:00.000Z');
+  });
+
+  test('empty array is a no-op', async () => {
+    await putWordsRaw([]);
+    expect(await getAllWords()).toHaveLength(0);
   });
 });
 
