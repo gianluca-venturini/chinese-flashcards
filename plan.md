@@ -217,19 +217,19 @@ Tests: UI components are not unit-tested in this codebase. They're exercised man
 Prerequisite: Step 12's `UploadButton` rewrite must be in place before deleting the upload route — that's what moves Pleco XML import to the browser. Verify the client-side import flow works end-to-end before deleting the server route.
 
 **Delete**:
-- [ ] `src/lib/reviews.ts` — replaced by `src/lib/sm2.ts`.
-- [ ] `src/app/api/review/route.ts`.
-- [ ] `src/app/api/reset-stats/route.ts`.
-- [ ] `src/app/api/words/create/route.ts`.
-- [ ] `src/app/api/words/update/route.ts`.
-- [ ] `src/app/api/words/upload/route.ts` — Pleco upload now runs client-side via the rewritten `UploadButton` (Step 12). `src/lib/parsePlecoXML.ts` stays and is imported by the client.
+- [x] `src/lib/reviews.ts` — replaced by `src/lib/sm2.ts`.
+- [x] `src/app/api/review/route.ts`.
+- [x] `src/app/api/reset-stats/route.ts`.
+- [x] `src/app/api/words/create/route.ts`.
+- [x] `src/app/api/words/update/route.ts`.
+- [x] `src/app/api/words/upload/route.ts` — Pleco upload now runs client-side via the rewritten `UploadButton` (Step 12). `src/lib/parsePlecoXML.ts` stays and is imported by the client.
 
 **Relocate**:
-- [ ] `src/app/api/words/upload/route.test.ts` → `src/lib/parsePlecoXML.test.ts` — it only tested the parser; with the upload route gone, the test belongs next to the parser per the new convention.
+- [x] `src/app/api/words/upload/route.test.ts` → `src/lib/parsePlecoXML.test.ts` — it only tested the parser; with the upload route gone, the test belongs next to the parser per the new convention.
 
 **Modify** `src/lib/db.ts`:
-- [ ] Remove the `Word` and `Review` interfaces (consumers import `Word` from `src/lib/schema.ts`).
-- [ ] Keep the `sql` export.
+- [x] Remove the `Word` and `Review` interfaces (consumers import `Word` from `src/lib/schema.ts`).
+- [x] Keep the `sql` export.
 
 ## Things being removed
 
