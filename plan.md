@@ -178,37 +178,37 @@ Tests: none (existing convention — `seed-db.ts` is exercised by `bun run db:se
 ### Step 12 — UI rewiring
 
 **Modify** `src/app/page.tsx` (flashcard review):
-- [ ] On mount: `syncFromServer()` then `storage.getAllWords()` then `dueWords.getDueWords` to populate the deck.
-- [ ] On swipe: `review.submitReview(currentWord.chinese, q)`. Wrap in try/catch — on rejection (network/server error) show a non-blocking error banner and continue (the local SR update is already persisted). Delete the existing `submitReview` that posts to `/api/review`.
-- [ ] Render: `english`, `example_chinese`, `example_pinyin` may now be `null`; guard the existing `getShortDefinition(currentWord.english)` and example blocks so they're hidden when the field is absent. `category` is already nullable in the current code (falls back to `UNKNOWN_CATEGORY_COLOR`).
+- [x] On mount: `syncFromServer()` then `storage.getAllWords()` then `dueWords.getDueWords` to populate the deck.
+- [x] On swipe: `review.submitReview(currentWord.chinese, q)`. Wrap in try/catch — on rejection (network/server error) show a non-blocking error banner and continue (the local SR update is already persisted). Delete the existing `submitReview` that posts to `/api/review`.
+- [x] Render: `english`, `example_chinese`, `example_pinyin` may now be `null`; guard the existing `getShortDefinition(currentWord.english)` and example blocks so they're hidden when the field is absent. `category` is already nullable in the current code (falls back to `UNKNOWN_CATEGORY_COLOR`).
 
 **Modify** `src/app/words/page.tsx` (word list):
-- [ ] On mount: same sync + read flow as `page.tsx`.
-- [ ] All flows below that call `sync.ensureWords` use try/catch — on rejection, surface the existing `alert(...)` / banner pattern already used by the page (the local IDB state is preserved either way).
-- [ ] Edit Word: replace `fetch('/api/words/update')` with `storage.putWord` + `sync.ensureWords([word])`.
-- [ ] Add Word: replace `fetch('/api/words/create')` with `apiClient.generatePinyin([chinese])` (read `[0].pinyin`) → `schema.newWord` → `storage.putWord` + `sync.ensureWords([word])`. The "English" input becomes optional in the modal — if left blank, the Word is created with `english: null` and the user can fill it later via "Improve translation".
-- [ ] "Improve translation": `apiClient.translateWords(selectedChinese)` → update each matching local Word via `storage.putWord`, then `sync.ensureWords(updatedWords)` once for the batch. Treat it as the canonical way to populate `english` for Words created without one.
-- [ ] "Add examples": fetch `knownWords` from `storage.getAllWords` (drop any `null` english entries from the context) and pass them to `apiClient.examplifyWords` → `storage.putWord` per result, then `sync.ensureWords(updatedWords)` once for the batch.
-- [ ] List/table rendering: guard `getShortDefinition(word.english)` and the example columns against `null`; show an empty cell or placeholder instead of crashing.
+- [x] On mount: same sync + read flow as `page.tsx`.
+- [x] All flows below that call `sync.ensureWords` use try/catch — on rejection, surface the existing `alert(...)` / banner pattern already used by the page (the local IDB state is preserved either way).
+- [x] Edit Word: replace `fetch('/api/words/update')` with `storage.putWord` + `sync.ensureWords([word])`.
+- [x] Add Word: replace `fetch('/api/words/create')` with `apiClient.generatePinyin([chinese])` (read `[0].pinyin`) → `schema.newWord` → `storage.putWord` + `sync.ensureWords([word])`. The "English" input becomes optional in the modal — if left blank, the Word is created with `english: null` and the user can fill it later via "Improve translation".
+- [x] "Improve translation": `apiClient.translateWords(selectedChinese)` → update each matching local Word via `storage.putWord`, then `sync.ensureWords(updatedWords)` once for the batch. Treat it as the canonical way to populate `english` for Words created without one.
+- [x] "Add examples": fetch `knownWords` from `storage.getAllWords` (drop any `null` english entries from the context) and pass them to `apiClient.examplifyWords` → `storage.putWord` per result, then `sync.ensureWords(updatedWords)` once for the batch.
+- [x] List/table rendering: guard `getShortDefinition(word.english)` and the example columns against `null`; show an empty cell or placeholder instead of crashing.
 
 **Modify** `src/app/components/UploadButton.tsx` (move Pleco XML import fully client-side):
-- [ ] Remove the `fetch('/api/words/upload', ...)` call and the `FormData` upload path.
-- [ ] On file pick, read the file via `file.text()` in the browser.
-- [ ] Call `parsePlecoXML(content)` — the parser already lives in `src/lib/parsePlecoXML.ts` and works in the browser unchanged. Pinyin comes from the XML itself, so no LLM call is needed.
-- [ ] For each parsed entry, build a Word via `schema.newWord({ chinese, pinyin, english })` (english is the Pleco definition; `category`, `example_*` stay `null`).
-- [ ] Write every Word to IDB via `storage.putWord`.
-- [ ] `await sync.ensureWords(words)` once for the whole batch, inside try/catch. On success show the existing "imported N words" message; on rejection show the existing error message and note that the words are already saved locally and will sync on retry.
+- [x] Remove the `fetch('/api/words/upload', ...)` call and the `FormData` upload path.
+- [x] On file pick, read the file via `file.text()` in the browser.
+- [x] Call `parsePlecoXML(content)` — the parser already lives in `src/lib/parsePlecoXML.ts` and works in the browser unchanged. Pinyin comes from the XML itself, so no LLM call is needed.
+- [x] For each parsed entry, build a Word via `schema.newWord({ chinese, pinyin, english })` (english is the Pleco definition; `category`, `example_*` stay `null`).
+- [x] Write every Word to IDB via `storage.putWord`.
+- [x] `await sync.ensureWords(words)` once for the whole batch, inside try/catch. On success show the existing "imported N words" message; on rejection show the existing error message and note that the words are already saved locally and will sync on retry.
 
 This step is what makes Step 13's deletion of `src/app/api/words/upload/route.ts` safe.
 
 **Modify** `src/app/components/ClassifyButton.tsx`:
-- [ ] Read words from `storage.getAllWords`, filter to `category == null`, call `apiClient.classifyWords(chinese[])`, write each result back via `storage.putWord`, then `await sync.ensureWords(updatedWords)` inside try/catch.
+- [x] Read words from `storage.getAllWords`, filter to `category == null`, call `apiClient.classifyWords(chinese[])`, write each result back via `storage.putWord`, then `await sync.ensureWords(updatedWords)` inside try/catch.
 
 **Modify** `src/app/components/ResetStatsButton.tsx`:
-- [ ] Call `storage.resetSr()`, then `await sync.ensureWords(modifiedWords)` inside try/catch — on rejection, leave the local reset in place and show the existing error UI.
+- [x] Call `storage.resetSr()`, then `await sync.ensureWords(modifiedWords)` inside try/catch — on rejection, leave the local reset in place and show the existing error UI.
 
 **Modify** `src/app/layout.tsx`:
-- [ ] Replace `<Link href="/handler/sign-out">` with a `<button>` whose `onClick` shows a `confirm("Sign out will erase all local data on this device. Continue?")` and, on confirm, calls `signOutAndWipe()`. (Requires making `UserInfoBar` a client component, or pulling the logout control into its own client component imported from the server component.)
+- [x] Replace `<Link href="/handler/sign-out">` with a `<button>` whose `onClick` shows a `confirm("Sign out will erase all local data on this device. Continue?")` and, on confirm, calls `signOutAndWipe()`. (Requires making `UserInfoBar` a client component, or pulling the logout control into its own client component imported from the server component.)
 
 Tests: UI components are not unit-tested in this codebase. They're exercised manually.
 

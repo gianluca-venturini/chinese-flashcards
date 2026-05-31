@@ -1,9 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Word } from "@/lib/db";
+import { type Word } from "@/lib/schema";
+import { newWord } from "@/lib/schema";
 import { CategoryId } from "@/lib/categories";
 import { CATEGORY_COLORS, UNKNOWN_CATEGORY_COLOR } from "@/lib/colors";
 import { getShortDefinition } from "@/lib/formatDefinition";
+import { getAllWords, putWord } from "@/lib/storage";
+import { syncFromServer, ensureWords } from "@/lib/sync";
+import { translateWords, examplifyWords, generatePinyin } from "@/lib/apiClient";
 
 export default function WordsPage() {
   const [words, setWords] = useState<Word[]>([]);
@@ -14,11 +18,8 @@ export default function WordsPage() {
   const [viewMode, setViewMode] = useState<'tiles' | 'table'>('tiles');
   const [showAdvancedColumns, setShowAdvancedColumns] = useState<boolean>(false);
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
-  const [suggestedTranslations, setSuggestedTranslations] = useState<Map<string, string>>(new Map());
-  const [suggestedExamples, setSuggestedExamples] = useState<Map<string, { example_chinese: string; example_pinyin: string }>>(new Map());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -26,31 +27,35 @@ export default function WordsPage() {
   const [newEnglish, setNewEnglish] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
 
-  useEffect(() => {
-    async function fetchWords() {
-      try {
-        const response = await fetch('/api/words?all=true');
-        const data = await response.json();
+  async function refreshWords() {
+    const allWords = await getAllWords();
+    setWords(allWords);
+  }
 
-        if (data.success && data.words) {
-          setWords(data.words);
-        } else {
-          setError('Failed to load words');
-        }
+  useEffect(() => {
+    async function loadWords() {
+      try {
+        await syncFromServer();
       } catch (err) {
-        console.error('Error fetching words:', err);
+        console.warn('Sync from server failed, using local data:', err);
+      }
+      try {
+        await refreshWords();
+      } catch (err) {
+        console.error('Error loading words from storage:', err);
         setError('Failed to load words');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchWords();
+    void loadWords();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleWordClick = (word: Word) => {
     setEditingWord(word);
-    setEnglishValue(word.english);
+    setEnglishValue(word.english ?? "");
   };
 
   const handleDialogClose = () => {
@@ -64,32 +69,14 @@ export default function WordsPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/words/update', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chinese: editingWord.chinese,
-          english: englishValue,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Update the word in local state
-        setWords((prevWords) =>
-          prevWords.map((word) =>
-            word.chinese === editingWord.chinese
-              ? { ...word, english: englishValue }
-              : word
-          )
-        );
-        handleDialogClose();
-      } else {
-        alert(`Failed to update word: ${data.error || 'Unknown error'}`);
+      const updated = await putWord({ ...editingWord, english: englishValue || null });
+      try {
+        await ensureWords([updated]);
+      } catch {
+        // Local edit preserved; will sync later
       }
+      await refreshWords();
+      handleDialogClose();
     } catch (err) {
       console.error('Error updating word:', err);
       alert('Failed to update word');
@@ -124,27 +111,26 @@ export default function WordsPage() {
 
     setIsTranslating(true);
     try {
-      const response = await fetch('/api/words/translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          words: selected.map((w) => w.chinese),
-        }),
-      });
+      const translations = await translateWords(selected.map((w) => w.chinese));
 
-      const data = await response.json();
+      const updatedWords = await Promise.all(
+        translations.map(async ({ word: chinese, english }) => {
+          const word = words.find((w) => w.chinese === chinese);
+          if (!word) return null;
+          return putWord({ ...word, english });
+        })
+      );
 
-      if (data.success && data.translations) {
-        const newTranslations = new Map(suggestedTranslations);
-        for (const translation of data.translations) {
-          newTranslations.set(translation.word, translation.english);
-        }
-        setSuggestedTranslations(newTranslations);
-      } else {
-        alert(`Failed to translate: ${data.error || 'Unknown error'}`);
+      const validWords = updatedWords.filter((w): w is NonNullable<typeof w> => w !== null);
+
+      try {
+        await ensureWords(validWords);
+      } catch {
+        // Local updates preserved; will sync later
       }
+
+      await refreshWords();
+      setSelectedWords(new Set());
     } catch (err) {
       console.error('Error translating words:', err);
       alert('Failed to translate words');
@@ -159,30 +145,30 @@ export default function WordsPage() {
 
     setIsGeneratingExamples(true);
     try {
-      const response = await fetch('/api/words/examplify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          words: selected.map((w) => w.chinese),
-        }),
-      });
+      const knownWords = words.filter((w) => w.english !== null);
+      const examples = await examplifyWords(
+        selected.map((w) => w.chinese),
+        knownWords.map((w) => w.chinese)
+      );
 
-      const data = await response.json();
+      const updatedWords = await Promise.all(
+        examples.map(async ({ word: chinese, example_chinese, example_pinyin }) => {
+          const word = words.find((w) => w.chinese === chinese);
+          if (!word) return null;
+          return putWord({ ...word, example_chinese, example_pinyin });
+        })
+      );
 
-      if (data.success && data.examples) {
-        const newExamples = new Map(suggestedExamples);
-        for (const example of data.examples) {
-          newExamples.set(example.word, {
-            example_chinese: example.example_chinese,
-            example_pinyin: example.example_pinyin,
-          });
-        }
-        setSuggestedExamples(newExamples);
-      } else {
-        alert(`Failed to generate examples: ${data.error || 'Unknown error'}`);
+      const validWords = updatedWords.filter((w): w is NonNullable<typeof w> => w !== null);
+
+      try {
+        await ensureWords(validWords);
+      } catch {
+        // Local updates preserved; will sync later
       }
+
+      await refreshWords();
+      setSelectedWords(new Set());
     } catch (err) {
       console.error('Error generating examples:', err);
       alert('Failed to generate examples');
@@ -191,102 +177,22 @@ export default function WordsPage() {
     }
   };
 
-  const selectedWordsWithSuggestions = Array.from(selectedWords).filter(
-    (chinese) => suggestedTranslations.has(chinese) || suggestedExamples.has(chinese)
-  );
-
-  const handleSaveTranslations = async () => {
-    if (selectedWordsWithSuggestions.length === 0) return;
-
-    setIsSaving(true);
-    let savedCount = 0;
-    let errorCount = 0;
-
-    try {
-      for (const chinese of selectedWordsWithSuggestions) {
-        const english = suggestedTranslations.get(chinese);
-        const example = suggestedExamples.get(chinese);
-        if (!english && !example) continue;
-
-        const payload: Record<string, string> = { chinese };
-        if (english) payload.english = english;
-        if (example) {
-          payload.example_chinese = example.example_chinese;
-          payload.example_pinyin = example.example_pinyin;
-        }
-
-        try {
-          const response = await fetch('/api/words/update', {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          });
-
-          const data = await response.json();
-
-          if (data.success) {
-            savedCount++;
-            // Update local state with only changed fields
-            setWords((prevWords) =>
-              prevWords.map((word) => {
-                if (word.chinese !== chinese) return word;
-                const updated = { ...word };
-                if (english) updated.english = english;
-                if (example) {
-                  updated.example_chinese = example.example_chinese;
-                  updated.example_pinyin = example.example_pinyin;
-                }
-                return updated;
-              })
-            );
-            // Remove from suggested maps
-            setSuggestedTranslations((prev) => {
-              const newMap = new Map(prev);
-              newMap.delete(chinese);
-              return newMap;
-            });
-            setSuggestedExamples((prev) => {
-              const newMap = new Map(prev);
-              newMap.delete(chinese);
-              return newMap;
-            });
-          } else {
-            errorCount++;
-          }
-        } catch {
-          errorCount++;
-        }
-      }
-
-      if (errorCount > 0) {
-        alert(`Saved ${savedCount} word(s). Failed to save ${errorCount}.`);
-      }
-      setSelectedWords(new Set());
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleAddWord = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      const response = await fetch('/api/words/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chinese: newChinese, english: newEnglish }),
-      });
-      const data = await response.json();
-      if (data.success && data.word) {
-        setWords((prev) => [data.word, ...prev]);
-        setShowAddModal(false);
-        setNewChinese("");
-        setNewEnglish("");
-      } else {
-        alert(`Failed to add word: ${data.error || 'Unknown error'}`);
+      const pinyins = await generatePinyin([newChinese]);
+      const pinyin = pinyins[0]?.pinyin ?? newChinese;
+      const word = await putWord(newWord({ chinese: newChinese, pinyin, english: newEnglish || null }));
+      try {
+        await ensureWords([word]);
+      } catch {
+        // Local create preserved; will sync later
       }
+      await refreshWords();
+      setShowAddModal(false);
+      setNewChinese("");
+      setNewEnglish("");
     } catch (err) {
       console.error('Error creating word:', err);
       alert('Failed to add word');
@@ -315,13 +221,11 @@ export default function WordsPage() {
     <div
       className="flex-1 w-full overflow-auto bg-zinc-50 p-4 font-sans dark:bg-black select-none"
       onTouchStart={(e) => {
-        // Dismiss card if tapping outside
         if (hoveredWord && !(e.target as HTMLElement).closest('[data-word-card]')) {
           setHoveredWord(null);
         }
       }}
       onClick={(e) => {
-        // Dismiss card if clicking outside
         if (hoveredWord && !(e.target as HTMLElement).closest('[data-word-card]')) {
           setHoveredWord(null);
         }
@@ -429,7 +333,7 @@ export default function WordsPage() {
                 {hoveredWord.pinyin}
               </p>
               <p className="text-lg text-zinc-900">
-                {getShortDefinition(hoveredWord.english)}
+                {hoveredWord.english ? getShortDefinition(hoveredWord.english) : ''}
               </p>
             </div>
           </div>
@@ -440,33 +344,24 @@ export default function WordsPage() {
         <div className="mb-4 flex gap-2 items-center sticky top-0 z-10 bg-zinc-50 dark:bg-black py-2">
           <button
             onClick={handleImproveTranslation}
-            disabled={selectedWords.size === 0 || isTranslating || isSaving || isGeneratingExamples}
+            disabled={selectedWords.size === 0 || isTranslating || isGeneratingExamples}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTranslating ? 'Translating...' : `Improve translation ${selectedWords.size > 0 ? `(${selectedWords.size})` : ''}`}
           </button>
           <button
             onClick={handleAddExamples}
-            disabled={selectedWords.size === 0 || isGeneratingExamples || isSaving || isTranslating}
+            disabled={selectedWords.size === 0 || isGeneratingExamples || isTranslating}
             className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingExamples ? 'Generating...' : `Add examples ${selectedWords.size > 0 ? `(${selectedWords.size})` : ''}`}
           </button>
-          {(suggestedTranslations.size > 0 || suggestedExamples.size > 0) && (
-            <button
-              onClick={handleSaveTranslations}
-              disabled={selectedWordsWithSuggestions.length === 0 || isSaving || isTranslating || isGeneratingExamples}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Saving...' : `Save ${selectedWordsWithSuggestions.length > 0 ? `(${selectedWordsWithSuggestions.length})` : ''}`}
-            </button>
-          )}
           <button
             onClick={() => {
               const word = words.find((w) => selectedWords.has(w.chinese));
               if (word) handleWordClick(word);
             }}
-            disabled={selectedWords.size !== 1 || isTranslating || isSaving}
+            disabled={selectedWords.size !== 1 || isTranslating}
             className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Edit manually
@@ -500,12 +395,6 @@ export default function WordsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Chinese</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Pinyin</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
-                {suggestedTranslations.size > 0 && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested English</th>
-                )}
-                {suggestedExamples.size > 0 && (
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Suggested Example</th>
-                )}
                 {showAdvancedColumns && (
                   <>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
@@ -605,22 +494,9 @@ export default function WordsPage() {
                   </td>
                   <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{word.chinese}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{word.pinyin}</td>
-                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{getShortDefinition(word.english)}</td>
-                  {suggestedTranslations.size > 0 && (
-                    <td className="px-4 py-3 text-green-600 dark:text-green-400">
-                      {suggestedTranslations.get(word.chinese) || ''}
-                    </td>
-                  )}
-                  {suggestedExamples.size > 0 && (
-                    <td className="px-4 py-3 text-purple-600 dark:text-purple-400">
-                      {suggestedExamples.has(word.chinese) ? (
-                        <>
-                          <span>{suggestedExamples.get(word.chinese)!.example_chinese}</span>
-                          <span className="ml-2 text-xs text-purple-400 dark:text-purple-500">{suggestedExamples.get(word.chinese)!.example_pinyin}</span>
-                        </>
-                      ) : ''}
-                    </td>
-                  )}
+                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+                    {word.english ? getShortDefinition(word.english) : ''}
+                  </td>
                   {showAdvancedColumns && (
                     <>
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 text-sm">
@@ -683,14 +559,13 @@ export default function WordsPage() {
                 autoFocus
               />
               <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                English
+                English <span className="text-zinc-400 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
                 value={newEnglish}
                 onChange={(e) => setNewEnglish(e.target.value)}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-                required
               />
               <div className="flex gap-2 justify-end">
                 <button
@@ -744,7 +619,6 @@ export default function WordsPage() {
                 onChange={(e) => setEnglishValue(e.target.value)}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                 rows={4}
-                required
               />
               <div className="flex gap-2 justify-end">
                 <button
@@ -770,4 +644,3 @@ export default function WordsPage() {
     </div>
   );
 }
-

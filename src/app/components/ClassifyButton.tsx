@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { getAllWords, putWord } from "@/lib/storage";
+import { classifyWords } from "@/lib/apiClient";
+import { ensureWords } from "@/lib/sync";
 
 export default function ClassifyButton() {
   const [classifying, setClassifying] = useState(false);
@@ -11,21 +14,36 @@ export default function ClassifyButton() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/words/classify', {
-        method: 'POST',
-      });
+      const allWords = await getAllWords();
+      const unclassified = allWords.filter((w) => w.category === null);
 
-      const data = await response.json();
-
-      if (data.success) {
-        setMessage(`✅ Classified ${data.classified} words${data.errors > 0 ? ` (${data.errors} errors)` : ''}!`);
-        // Optionally refresh the page to show updated words
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        setMessage(`❌ Error: ${data.error || 'Failed to classify words'}`);
+      if (unclassified.length === 0) {
+        setMessage('✅ All words are already classified!');
+        return;
       }
+
+      const classifications = await classifyWords(unclassified.map((w) => w.chinese));
+
+      const updatedWords = (
+        await Promise.all(
+          classifications.map(async ({ word: chinese, category }) => {
+            const word = allWords.find((w) => w.chinese === chinese);
+            if (!word) return null;
+            return putWord({ ...word, category });
+          })
+        )
+      ).filter((w): w is NonNullable<typeof w> => w !== null);
+
+      try {
+        await ensureWords(updatedWords);
+      } catch {
+        // Local classify is preserved; will sync on next session
+      }
+
+      setMessage(`✅ Classified ${updatedWords.length} words!`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error('Classification error:', error);
       setMessage('❌ Failed to classify words');

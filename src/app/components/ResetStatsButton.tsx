@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { resetSr } from "@/lib/storage";
+import { ensureWords } from "@/lib/sync";
 
 export default function ResetStatsButton() {
   const [resetting, setResetting] = useState(false);
@@ -15,21 +17,16 @@ export default function ResetStatsButton() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/reset-stats', {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMessage('✅ Stats reset successfully!');
-        // Optionally refresh the page
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        setMessage(`❌ Error: ${data.error || 'Failed to reset stats'}`);
+      const modifiedWords = await resetSr();
+      try {
+        await ensureWords(modifiedWords);
+      } catch {
+        // Local reset is preserved; will sync on next session
       }
+      setMessage('✅ Stats reset successfully!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error('Reset stats error:', error);
       setMessage('❌ Failed to reset stats');
