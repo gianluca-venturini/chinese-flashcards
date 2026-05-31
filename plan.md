@@ -103,16 +103,16 @@ Every function operates on batches. Results are arrays of objects keyed by `word
 ### Step 6 — Sync layer
 
 **Create** `src/lib/sync.ts`:
-- [ ] `reconcile(local: Word | undefined, remote: Word): Word` — pure: picks the winner by `updated_at`, treating `null` as the epoch. Exported for unit tests.
-- [ ] `syncFromServer(): Promise<void>` — calls `apiClient.fetchAllWords`, reconciles each entity into IDB.
-- [ ] `ensureWords(words: Word[]): Promise<void>` — awaits `apiClient.putWords`. **Throws on network or server failure** (any non-2xx response, fetch rejection, or zod parse failure on the response). Single-word callers (review submission, edit) wrap in `[word]`. An empty array is a no-op that resolves immediately. Callers are responsible for try/catch and surfacing the failure to the user; the local IDB write has already happened by the time `ensureWords` is called, so the on-device state is preserved across a failed sync.
+- [x] `reconcile(local: Word | undefined, remote: Word): Word` — pure: picks the winner by `updated_at`, treating `null` as the epoch. Exported for unit tests.
+- [x] `syncFromServer(): Promise<void>` — calls `apiClient.fetchAllWords`, reconciles each entity into IDB.
+- [x] `ensureWords(words: Word[]): Promise<void>` — awaits `apiClient.putWords`. **Throws on network or server failure** (any non-2xx response, fetch rejection, or zod parse failure on the response). Single-word callers (review submission, edit) wrap in `[word]`. An empty array is a no-op that resolves immediately. Callers are responsible for try/catch and surfacing the failure to the user; the local IDB write has already happened by the time `ensureWords` is called, so the on-device state is preserved across a failed sync.
 
 **Create** `src/lib/sync.test.ts` (fake-indexeddb + mocked `fetch`):
-- [ ] `reconcile`: remote-newer wins; local-newer wins; remote-has-ts vs local-null → remote wins; both-null → remote wins (server is the merge target).
-- [ ] `syncFromServer` persists fetched rows; does not clobber a local-newer entity.
-- [ ] `ensureWords` issues PUT with `{ words: [...] }` and resolves on a 2xx response.
-- [ ] `ensureWords` **throws** when the server returns 500, when `fetch` rejects (offline), and when the response body fails zod parsing.
-- [ ] `ensureWords([])` resolves without firing a request.
+- [x] `reconcile`: remote-newer wins; local-newer wins; remote-has-ts vs local-null → remote wins; both-null → remote wins (server is the merge target).
+- [x] `syncFromServer` persists fetched rows; does not clobber a local-newer entity.
+- [x] `ensureWords` issues PUT with `{ words: [...] }` and resolves on a 2xx response.
+- [x] `ensureWords` **throws** when the server returns 500, when `fetch` rejects (offline), and when the response body fails zod parsing.
+- [x] `ensureWords([])` resolves without firing a request.
 
 ### Step 7 — Review submission flow
 

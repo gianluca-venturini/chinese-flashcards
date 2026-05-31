@@ -34,6 +34,10 @@ const ExamplifyResponseSchema = z.object({
   ),
 });
 
+const PutWordsResponseSchema = z.object({
+  success: z.boolean(),
+});
+
 const PinyinResponseSchema = z.object({
   pinyins: z.array(
     z.object({
@@ -60,7 +64,7 @@ export async function putWords(words: Word[]): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ words }),
   });
-  if (!res.ok) throw new Error(`putWords failed: ${res.status}`);
+  await parseJson(res, PutWordsResponseSchema);
 }
 
 export async function classifyWords(
