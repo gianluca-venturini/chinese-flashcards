@@ -43,13 +43,13 @@ Steps are ordered so each builds on the previous: schema → pure logic → stor
 ### Step 2 — SM-2 algorithm
 
 **Create** `src/lib/sm2.ts`:
-- [ ] `applySm2(sr: { n; ef; i }, q: number): { n; ef; i }` — pure function returning the updated SR triple.
+- [x] `applySm2(sr: { n; ef; i }, q: number): { n; ef; i }` — pure function returning the updated SR triple.
 
 **Create** `src/lib/sm2.test.ts`:
-- [ ] `q < 3` resets `n → 0` and `i → 1`.
-- [ ] `q ≥ 3` from `n=0` → `i=1, n=1`; from `n=1` → `i=6, n=2`; from `n≥2` → `i = round(prev_i * ef), n = n + 1`.
-- [ ] `ef` floor of 1.3 holds across repeated low-quality reviews.
-- [ ] `ef` delta matches the SM-2 formula for each `q ∈ {0..5}`.
+- [x] `q < 3` resets `n → 0` and `i → 1`.
+- [x] `q ≥ 3` from `n=0` → `i=1, n=1`; from `n=1` → `i=6, n=2`; from `n≥2` → `i = round(prev_i * ef), n = n + 1`.
+- [x] `ef` floor of 1.3 holds across repeated low-quality reviews.
+- [x] `ef` delta matches the SM-2 formula for each `q ∈ {0..5}`.
 
 (`src/lib/reviews.ts` is left in place for now and removed in Step 13 to keep this step shippable on its own.)
 
