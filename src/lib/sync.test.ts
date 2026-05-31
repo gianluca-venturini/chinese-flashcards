@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, test, mock, beforeEach } from 'bun:test';
-import { reconcile, syncFromServer, ensureWords } from './sync';
+import { reconcile, syncFromServer, ensureWords, diffWords, toSyncStatus, syncBidirectional } from './sync';
 import { newWord } from './schema';
-import { putWord, getWord, clearAll } from './storage';
+import { putWord, putWordsRaw, getWord, clearAll } from './storage';
 
 const WORD_A = newWord({ chinese: '你好', pinyin: 'nǐ hǎo', english: 'hello' });
 const WORD_B = newWord({ chinese: '谢谢', pinyin: 'xiè xie', english: 'thank you' });
@@ -91,6 +91,123 @@ describe('syncFromServer', () => {
     setupFetch({ words: [WORD_A] });
     await syncFromServer();
     expect(await getWord(WORD_A.chinese)).toBeDefined();
+  });
+});
+
+describe('diffWords', () => {
+  test('remote-only → toPull', () => {
+    const { toPull, toPush } = diffWords([], [WORD_A]);
+    expect(toPull).toHaveLength(1);
+    expect(toPull[0].chinese).toBe(WORD_A.chinese);
+    expect(toPush).toHaveLength(0);
+  });
+
+  test('local-only → toPush', () => {
+    const { toPull, toPush } = diffWords([WORD_A], []);
+    expect(toPush).toHaveLength(1);
+    expect(toPush[0].chinese).toBe(WORD_A.chinese);
+    expect(toPull).toHaveLength(0);
+  });
+
+  test('remote newer → toPull', () => {
+    const local = { ...WORD_A, updated_at: '2024-01-01T00:00:00.000Z' };
+    const remote = { ...WORD_A, updated_at: '2024-06-01T00:00:00.000Z' };
+    const { toPull, toPush } = diffWords([local], [remote]);
+    expect(toPull).toHaveLength(1);
+    expect(toPush).toHaveLength(0);
+  });
+
+  test('local newer → toPush', () => {
+    const local = { ...WORD_A, updated_at: '2024-06-01T00:00:00.000Z' };
+    const remote = { ...WORD_A, updated_at: '2024-01-01T00:00:00.000Z' };
+    const { toPull, toPush } = diffWords([local], [remote]);
+    expect(toPush).toHaveLength(1);
+    expect(toPull).toHaveLength(0);
+  });
+
+  test('same updated_at → neither', () => {
+    const ts = '2024-01-01T00:00:00.000Z';
+    const local = { ...WORD_A, updated_at: ts };
+    const remote = { ...WORD_A, updated_at: ts };
+    const { toPull, toPush } = diffWords([local], [remote]);
+    expect(toPull).toHaveLength(0);
+    expect(toPush).toHaveLength(0);
+  });
+
+  test('empty/empty → empty diff', () => {
+    const { toPull, toPush } = diffWords([], []);
+    expect(toPull).toHaveLength(0);
+    expect(toPush).toHaveLength(0);
+  });
+});
+
+describe('toSyncStatus', () => {
+  test('maps toPull.length to staleLocal and toPush.length to staleRemote', () => {
+    const diff = { toPull: [WORD_A, WORD_B], toPush: [WORD_B] };
+    const status = toSyncStatus(diff);
+    expect(status.staleLocal).toBe(2);
+    expect(status.staleRemote).toBe(1);
+  });
+
+  test('in-sync diff → zeros', () => {
+    const status = toSyncStatus({ toPull: [], toPush: [] });
+    expect(status.staleLocal).toBe(0);
+    expect(status.staleRemote).toBe(0);
+  });
+});
+
+describe('syncBidirectional', () => {
+  test('pulls remote-newer into IDB and pushes local-newer to server', async () => {
+    const localWord = { ...WORD_A, english: 'local', updated_at: '2024-06-01T00:00:00.000Z' };
+    const remoteNewerWord = { ...WORD_B, english: 'remote-new', updated_at: '2024-06-01T00:00:00.000Z' };
+    await putWord(localWord);
+
+    setupFetch({
+      words: [
+        { ...WORD_A, english: 'remote-old', updated_at: '2024-01-01T00:00:00.000Z' },
+        remoteNewerWord,
+      ],
+    });
+    // second fetch (PUT) needs its own mock — chain two responses
+    let callCount = 0;
+    globalThis.fetch = mock(async (url: string, init?: RequestInit) => {
+      callCount++;
+      fetchCalls.push({ url, method: init?.method, body: init?.body ? JSON.parse(init.body as string) : undefined });
+      if (callCount === 1) {
+        return { ok: true, status: 200, json: async () => ({ words: [
+          { ...WORD_A, english: 'remote-old', updated_at: '2024-01-01T00:00:00.000Z' },
+          remoteNewerWord,
+        ]}) } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
+    });
+
+    const { pulled, pushed } = await syncBidirectional();
+
+    expect(pulled).toBe(1); // WORD_B pulled in
+    expect(pushed).toBe(1); // WORD_A (local newer) pushed out
+
+    const storedB = await getWord(WORD_B.chinese);
+    expect(storedB!.english).toBe('remote-new');
+    expect(storedB!.updated_at).toBe('2024-06-01T00:00:00.000Z');
+
+    const storedA = await getWord(WORD_A.chinese);
+    expect(storedA!.english).toBe('local'); // not overwritten
+  });
+
+  test('returns zero counts when already in sync', async () => {
+    const fixedTs = '2024-01-01T00:00:00.000Z';
+    const word = { ...WORD_A, updated_at: fixedTs };
+    await putWordsRaw([word]); // preserve the timestamp so local == remote
+    let callCount = 0;
+    globalThis.fetch = mock(async (_url: string, _init?: RequestInit) => {
+      callCount++;
+      if (callCount === 1) return { ok: true, status: 200, json: async () => ({ words: [word] }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ success: true }) } as Response;
+    });
+    const { pulled, pushed } = await syncBidirectional();
+    expect(pulled).toBe(0);
+    expect(pushed).toBe(0);
   });
 });
 

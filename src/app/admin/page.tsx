@@ -3,6 +3,7 @@
 import UploadButton from "../components/UploadButton";
 import ClassifyButton from "../components/ClassifyButton";
 import ResetStatsButton from "../components/ResetStatsButton";
+import SyncSection from "../components/SyncSection";
 
 export default function AdminPage() {
   return (
@@ -26,6 +27,12 @@ export default function AdminPage() {
               Statistics
             </h2>
             <ResetStatsButton />
+          </div>
+          <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-900">
+            <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+              Sync
+            </h2>
+            <SyncSection />
           </div>
         </div>
       </div>
