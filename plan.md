@@ -68,20 +68,20 @@ Steps are ordered so each builds on the previous: schema → pure logic → stor
 ### Step 4 — IndexedDB storage
 
 **Create** `src/lib/storage.ts`:
-- [ ] Internal `openDb()` — opens/upgrades a single object store `words` keyed by `chinese`.
-- [ ] `getAllWords(): Promise<Word[]>` — reads all rows; zod-parses each; drops + logs malformed records.
-- [ ] `getWord(chinese: string): Promise<Word | undefined>` — single read with zod parse.
-- [ ] `putWord(word: Word): Promise<Word>` — validates with zod; sets `updated_at = now`; writes; returns the persisted Word.
-- [ ] `resetSr(): Promise<Word[]>` — overwrites SR fields on every word with `SR_DEFAULTS`; bumps `updated_at`; returns the modified words for the caller to ensure to the server.
-- [ ] `clearAll(): Promise<void>` — deletes the IDB database (used by sign-out).
+- [x] Internal `openDb()` — opens/upgrades a single object store `words` keyed by `chinese`.
+- [x] `getAllWords(): Promise<Word[]>` — reads all rows; zod-parses each; drops + logs malformed records.
+- [x] `getWord(chinese: string): Promise<Word | undefined>` — single read with zod parse.
+- [x] `putWord(word: Word): Promise<Word>` — validates with zod; sets `updated_at = now`; writes; returns the persisted Word.
+- [x] `resetSr(): Promise<Word[]>` — overwrites SR fields on every word with `SR_DEFAULTS`; bumps `updated_at`; returns the modified words for the caller to ensure to the server.
+- [x] `clearAll(): Promise<void>` — deletes the IDB database (used by sign-out).
 
 **Create** `src/lib/storage.test.ts` (uses `fake-indexeddb`):
-- [ ] `putWord` then `getWord` round-trips.
-- [ ] `getAllWords` returns every put.
-- [ ] `putWord` rejects invalid input via zod.
-- [ ] `putWord` always sets a fresh `updated_at`, even if the input already had one.
-- [ ] `resetSr` resets SR fields on every word while leaving english/category/examples untouched.
-- [ ] `clearAll` empties the store; a follow-up `getAllWords` returns `[]`.
+- [x] `putWord` then `getWord` round-trips.
+- [x] `getAllWords` returns every put.
+- [x] `putWord` rejects invalid input via zod.
+- [x] `putWord` always sets a fresh `updated_at`, even if the input already had one.
+- [x] `resetSr` resets SR fields on every word while leaving english/category/examples untouched.
+- [x] `clearAll` empties the store; a follow-up `getAllWords` returns `[]`.
 
 ### Step 5 — Typed API client
 
