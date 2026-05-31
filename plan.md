@@ -24,21 +24,21 @@ Steps are ordered so each builds on the previous: schema → pure logic → stor
 ### Step 1 — Dependencies and canonical schema
 
 **Modify** `package.json`:
-- [ ] Promote `zod` to a direct dependency (currently only transitive via `ai`/`@ai-sdk/openai`).
-- [ ] Add `fake-indexeddb` to `devDependencies`.
+- [x] Promote `zod` to a direct dependency (currently only transitive via `ai`/`@ai-sdk/openai`).
+- [x] Add `fake-indexeddb` to `devDependencies`.
 
 **Create** `src/lib/schema.ts`:
-- [ ] `WordSchema` — zod schema. Required fields: `chinese: string`, `pinyin: string`, `created_at: string` (ISO), `i: int ≥ 1`, `ef: number ≥ 1.3`, `n: int ≥ 0`. Nullable fields (LLM-filled or user-edited later): `english: string | null`, `category: CategoryId | null`, `example_chinese: string | null`, `example_pinyin: string | null`, `last_reviewed_at: string | null`, `updated_at: string | null`.
-- [ ] `type Word = z.infer<typeof WordSchema>`.
-- [ ] `SR_DEFAULTS = { n: 0, ef: 2.5, i: 1, last_reviewed_at: null }`.
-- [ ] `newWord(input: { chinese; pinyin; english?; category? }): Word` — convenience constructor. Only `chinese` and `pinyin` are required; `english`, `category`, `example_chinese`, `example_pinyin` default to `null`. Fills `SR_DEFAULTS`, sets `created_at` and `updated_at` to now.
+- [x] `WordSchema` — zod schema. Required fields: `chinese: string`, `pinyin: string`, `created_at: string` (ISO), `i: int ≥ 1`, `ef: number ≥ 1.3`, `n: int ≥ 0`. Nullable fields (LLM-filled or user-edited later): `english: string | null`, `category: CategoryId | null`, `example_chinese: string | null`, `example_pinyin: string | null`, `last_reviewed_at: string | null`, `updated_at: string | null`.
+- [x] `type Word = z.infer<typeof WordSchema>`.
+- [x] `SR_DEFAULTS = { n: 0, ef: 2.5, i: 1, last_reviewed_at: null }`.
+- [x] `newWord(input: { chinese; pinyin; english?; category? }): Word` — convenience constructor. Only `chinese` and `pinyin` are required; `english`, `category`, `example_chinese`, `example_pinyin` default to `null`. Fills `SR_DEFAULTS`, sets `created_at` and `updated_at` to now.
 
 **Create** `src/lib/schema.test.ts`:
-- [ ] A fully-populated Word parses cleanly.
-- [ ] A Word built from `newWord({ chinese, pinyin })` (no english, no category) parses cleanly with `english`, `category`, `example_chinese`, `example_pinyin` all `null`.
-- [ ] A Word built from `newWord()` with every optional supplied round-trips through `WordSchema`.
-- [ ] `n < 0`, `ef < 1.3`, `i < 1`, non-ISO timestamps all fail to parse.
-- [ ] `english`, `category`, `example_chinese`, `example_pinyin`, `updated_at`, `last_reviewed_at` each accept both `null` and a valid value.
+- [x] A fully-populated Word parses cleanly.
+- [x] A Word built from `newWord({ chinese, pinyin })` (no english, no category) parses cleanly with `english`, `category`, `example_chinese`, `example_pinyin` all `null`.
+- [x] A Word built from `newWord()` with every optional supplied round-trips through `WordSchema`.
+- [x] `n < 0`, `ef < 1.3`, `i < 1`, non-ISO timestamps all fail to parse.
+- [x] `english`, `category`, `example_chinese`, `example_pinyin`, `updated_at`, `last_reviewed_at` each accept both `null` and a valid value.
 
 ### Step 2 — SM-2 algorithm
 
