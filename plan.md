@@ -88,17 +88,17 @@ Steps are ordered so each builds on the previous: schema → pure logic → stor
 Every function operates on batches. Results are arrays of objects keyed by `word: string` (the chinese character — the Word PK), so the caller can match each result back to its local Word by `chinese`.
 
 **Create** `src/lib/apiClient.ts`:
-- [ ] `fetchAllWords(): Promise<Word[]>` — GET `/api/words`, zod-parses response.
-- [ ] `putWords(words: Word[]): Promise<void>` — PUT `/api/words` with body `{ words: Word[] }`. Single-word callers wrap in `[word]`.
-- [ ] `classifyWords(chinese: string[]): Promise<{ word: string; category: CategoryId }[]>` — POST `/api/words/classify`.
-- [ ] `translateWords(chinese: string[]): Promise<{ word: string; english: string }[]>` — POST `/api/words/translate`.
-- [ ] `examplifyWords(targets: string[], knownWords: string[]): Promise<{ word: string; example_chinese: string; example_pinyin: string }[]>` — POST `/api/words/examplify`.
-- [ ] `generatePinyin(chinese: string[]): Promise<{ word: string; pinyin: string }[]>` — POST `/api/words/pinyin` with body `{ chinese: string[] }`.
+- [x] `fetchAllWords(): Promise<Word[]>` — GET `/api/words`, zod-parses response.
+- [x] `putWords(words: Word[]): Promise<void>` — PUT `/api/words` with body `{ words: Word[] }`. Single-word callers wrap in `[word]`.
+- [x] `classifyWords(chinese: string[]): Promise<{ word: string; category: CategoryId }[]>` — POST `/api/words/classify`.
+- [x] `translateWords(chinese: string[]): Promise<{ word: string; english: string }[]>` — POST `/api/words/translate`.
+- [x] `examplifyWords(targets: string[], knownWords: string[]): Promise<{ word: string; example_chinese: string; example_pinyin: string }[]>` — POST `/api/words/examplify`.
+- [x] `generatePinyin(chinese: string[]): Promise<{ word: string; pinyin: string }[]>` — POST `/api/words/pinyin` with body `{ chinese: string[] }`.
 
 **Create** `src/lib/apiClient.test.ts` (mocked `fetch`):
-- [ ] Each function constructs the right URL, method, and body — including the batch wrapping (`{ words }`, `{ chinese }`).
-- [ ] Each function parses its response through the matching zod schema; malformed responses throw.
-- [ ] Empty-batch input (e.g. `putWords([])`, `generatePinyin([])`) is a no-op that resolves without firing a request.
+- [x] Each function constructs the right URL, method, and body — including the batch wrapping (`{ words }`, `{ chinese }`).
+- [x] Each function parses its response through the matching zod schema; malformed responses throw.
+- [x] Empty-batch input (e.g. `putWords([])`, `generatePinyin([])`) is a no-op that resolves without firing a request.
 
 ### Step 6 — Sync layer
 
