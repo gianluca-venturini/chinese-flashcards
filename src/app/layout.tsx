@@ -4,6 +4,7 @@ import "./globals.css";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
 import Link from "next/link";
+import SignOutButton from "@/app/components/SignOutButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,12 +58,7 @@ async function UserInfoBar() {
         >
           Admin
         </Link>
-        <Link
-          href="/handler/sign-out"
-          className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-        >
-          Logout
-        </Link>
+        <SignOutButton />
       </div>
     </div>
   );

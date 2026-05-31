@@ -1,11 +1,14 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { debounce } from "lodash";
-import { v7 as uuidv7 } from "uuid";
 import { getShortDefinition } from "@/lib/formatDefinition";
 import { CategoryId } from "@/lib/categories";
-import { Word } from "@/lib/db";
+import { type Word } from "@/lib/schema";
 import { CATEGORY_COLORS, UNKNOWN_CATEGORY_COLOR } from "@/lib/colors";
+import { getAllWords } from "@/lib/storage";
+import { syncFromServer } from "@/lib/sync";
+import { submitReview as submitReviewLocal } from "@/lib/review";
+import { getDueWords } from "@/lib/dueWords";
 
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
@@ -17,6 +20,7 @@ export default function Home() {
   const [repeatWords, setRepeatWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   /** Current index of the word being reviewed. */
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isRevealed, setIsRevealed] = useState<boolean>(false);
@@ -28,37 +32,25 @@ export default function Home() {
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
-  // Fetch words from API
   useEffect(() => {
-    async function fetchWords() {
+    async function loadWords() {
       try {
-        const response = await fetch('/api/words');
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.error || `Failed to load words (${response.status})`;
-          setError(errorMessage);
-          setLoading(false);
-          return;
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.words) {
-          setWords(data.words);
-        } else {
-          const errorMessage = data.error || 'Failed to load words';
-          setError(errorMessage);
-        }
+        await syncFromServer();
       } catch (err) {
-        console.error('Error fetching words:', err);
-        setError('Failed to load words. Please check your connection and try again.');
+        console.warn('Sync from server failed, using local data:', err);
+      }
+      try {
+        const allWords = await getAllWords();
+        setWords(getDueWords(allWords, new Date()));
+      } catch (err) {
+        console.error('Error loading words from storage:', err);
+        setError('Failed to load words.');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchWords();
+    void loadWords();
   }, []);
 
   useEffect(() => {
@@ -99,23 +91,10 @@ export default function Home() {
   }, [debouncedFlipRevealed]);
 
   const submitReview = useCallback((chinese: string, q: number) => {
-    const id = uuidv7();
-    const timestamp = new Date().toISOString();
-
-    fetch('/api/review', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id,
-        chinese,
-        q,
-        timestamp,
-      }),
-    }).catch((error) => {
-      // Silently handle errors - don't block UI if API call fails
-      console.error('Error recording swipe:', error);
+    submitReviewLocal(chinese, q).catch((err) => {
+      console.error('Review sync error:', err);
+      setSyncError('Failed to sync review. Local state saved.');
+      setTimeout(() => setSyncError(null), 5000);
     });
   }, []);
 
@@ -194,7 +173,13 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+    <div className="flex flex-1 w-full select-none flex-col items-center justify-center overflow-hidden bg-zinc-50 font-sans dark:bg-black">
+      {syncError && (
+        <div className="w-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm text-center py-1 px-4">
+          {syncError}
+        </div>
+      )}
+      <div className="flex flex-1 w-full items-center justify-center p-4">
       <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
         {nextWords.map((currentWord, index) => {
           const isTopCard = index === 0;
@@ -243,7 +228,7 @@ export default function Home() {
                     isTopCard && isRevealed ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  {getShortDefinition(currentWord.english)}
+                  {currentWord.english ? getShortDefinition(currentWord.english) : ''}
                 </p>
                 {currentWord.example_chinese && (
                   <p
@@ -280,6 +265,7 @@ export default function Home() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

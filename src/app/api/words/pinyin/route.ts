@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { stackServerApp } from '@/stack';
-import { classifyChineseWords } from '@/lib/categories';
+import { generatePinyin } from '@/lib/translate';
 
 const RequestSchema = z.object({
   chinese: z.array(z.string()).min(1, 'At least one word is required'),
@@ -23,10 +23,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const classifications = await classifyChineseWords(parsed.data.chinese);
-    return NextResponse.json({ classifications, success: true });
+    const pinyins = await Promise.all(
+      parsed.data.chinese.map(async (word) => ({
+        word,
+        pinyin: await generatePinyin(word),
+      })),
+    );
+
+    return NextResponse.json({ pinyins, success: true });
   } catch (error) {
-    console.error('Error classifying words:', error);
-    return NextResponse.json({ error: 'Failed to classify words', success: false }, { status: 500 });
+    console.error('Error generating pinyin:', error);
+    return NextResponse.json({ error: 'Failed to generate pinyin', success: false }, { status: 500 });
   }
 }

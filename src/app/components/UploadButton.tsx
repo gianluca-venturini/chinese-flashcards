@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { parsePlecoXML } from "@/lib/parsePlecoXML";
+import { newWord } from "@/lib/schema";
+import { putWord } from "@/lib/storage";
+import { ensureWords } from "@/lib/sync";
 
 export default function UploadButton() {
   const [uploading, setUploading] = useState(false);
@@ -10,7 +14,6 @@ export default function UploadButton() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.name.endsWith('.xml')) {
       setMessage('Please upload an XML file');
       setTimeout(() => setMessage(null), 3000);
@@ -21,31 +24,30 @@ export default function UploadButton() {
     setMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const content = await file.text();
+      const parsed = parsePlecoXML(content);
 
-      const response = await fetch('/api/words/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      const words = await Promise.all(
+        parsed.map(async ({ chinese, pinyin, english }) =>
+          putWord(newWord({ chinese, pinyin, english: english || null }))
+        )
+      );
 
-      const data = await response.json();
-
-      if (data.success) {
-        setMessage(`✅ Successfully imported ${data.count} words!`);
-        // Refresh the page to show new words
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } else {
-        setMessage(`❌ Error: ${data.error || 'Failed to upload file'}`);
+      try {
+        await ensureWords(words);
+        setMessage(`✅ Successfully imported ${words.length} words!`);
+      } catch {
+        setMessage(`✅ Imported ${words.length} words locally. Will sync when online.`);
       }
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error('Upload error:', error);
-      setMessage('❌ Failed to upload file');
+      setMessage('❌ Failed to import file');
     } finally {
       setUploading(false);
-      // Clear the input so the same file can be selected again
       event.target.value = '';
       setTimeout(() => setMessage(null), 5000);
     }
