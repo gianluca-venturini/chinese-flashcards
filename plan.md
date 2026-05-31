@@ -117,13 +117,13 @@ Every function operates on batches. Results are arrays of objects keyed by `word
 ### Step 7 — Review submission flow
 
 **Create** `src/lib/review.ts`:
-- [ ] `submitReview(chinese: string, q: number): Promise<Word>` — loads the Word from `storage.getWord`, runs `applySm2`, sets `last_reviewed_at = now`, persists via `storage.putWord` (which bumps `updated_at`), then awaits `sync.ensureWords([word])`. If the ensure throws, `submitReview` rethrows; the local SR state stays persisted regardless, so the next sync will retry. Returns the new Word on success.
+- [x] `submitReview(chinese: string, q: number): Promise<Word>` — loads the Word from `storage.getWord`, runs `applySm2`, sets `last_reviewed_at = now`, persists via `storage.putWord` (which bumps `updated_at`), then awaits `sync.ensureWords([word])`. If the ensure throws, `submitReview` rethrows; the local SR state stays persisted regardless, so the next sync will retry. Returns the new Word on success.
 
 **Create** `src/lib/review.test.ts` (fake-indexeddb + mocked `fetch`):
-- [ ] After `submitReview`, the persisted Word's SR + `last_reviewed_at` match what `applySm2` would produce.
-- [ ] `q=5` on a default Word produces `n=1, i=1`; `q=0` keeps `n=0, i=1` but still bumps `last_reviewed_at` and adjusts `ef`.
-- [ ] The PUT call fires with the new entity.
-- [ ] When the server returns 500, `submitReview` rejects, but `storage.getWord(chinese)` still returns the updated SR (the IDB write persists across a failed sync).
+- [x] After `submitReview`, the persisted Word's SR + `last_reviewed_at` match what `applySm2` would produce.
+- [x] `q=5` on a default Word produces `n=1, i=1`; `q=0` keeps `n=0, i=1` but still bumps `last_reviewed_at` and adjusts `ef`.
+- [x] The PUT call fires with the new entity.
+- [x] When the server returns 500, `submitReview` rejects, but `storage.getWord(chinese)` still returns the updated SR (the IDB write persists across a failed sync).
 
 ### Step 8 — Sign-out helper
 
