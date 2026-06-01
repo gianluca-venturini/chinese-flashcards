@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
 import Link from "next/link";
 import SignOutButton from "@/app/components/SignOutButton";
+import ServiceWorkerRegistrar from "@/app/components/ServiceWorkerRegistrar";
+import OfflineBadge from "@/app/components/OfflineBadge";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +21,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Chinese Flashcards",
   description: "Learn Chinese with flashcards",
+  manifest: "/manifest.webmanifest",
+  icons: { apple: "/icons/icon-192.png" },
+  appleWebApp: { capable: true, title: "Chinese Flashcards" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 async function UserInfoBar() {
@@ -77,6 +86,8 @@ export default function RootLayout({
         <StackProvider app={stackServerApp}>
           <StackTheme>
             <UserInfoBar />
+            <OfflineBadge />
+            <ServiceWorkerRegistrar />
             <div className="flex-1 flex flex-col min-h-0">
               {children}
             </div>

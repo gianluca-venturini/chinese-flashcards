@@ -18,6 +18,12 @@ function openDb(): Promise<IDBDatabase> {
     };
     req.onsuccess = (e) => resolve((e.target as IDBOpenDBRequest).result);
     req.onerror = (e) => reject((e.target as IDBOpenDBRequest).error);
+    // If a pending deleteDatabase() from another tab is blocking this open,
+    // reject immediately instead of hanging forever.
+    req.onblocked = () => {
+      dbPromise = null;
+      reject(new Error('indexedDB.open blocked'));
+    };
   });
   return dbPromise;
 }
@@ -103,15 +109,17 @@ export async function putWordsRaw(words: Word[]): Promise<void> {
 }
 
 export async function clearAll(): Promise<void> {
-  if (dbPromise) {
-    const db = await dbPromise;
-    db.close();
-    dbPromise = null;
-  }
+  // Clear all records rather than deleting the database. deleteDatabase() can
+  // be blocked indefinitely when another tab holds an open connection, which
+  // leaves a pending delete that causes all subsequent open() calls to queue
+  // behind it, hanging forever. Clearing the store removes all user data
+  // without that risk; the DB structure (object store definition) is harmless.
+  const db = await openDb();
   return new Promise((resolve, reject) => {
-    const req = indexedDB.deleteDatabase(DB_NAME);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('deleteDatabase blocked'));
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+    tx.objectStore(STORE).clear();
   });
 }

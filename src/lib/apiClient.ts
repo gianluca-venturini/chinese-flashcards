@@ -47,19 +47,32 @@ const PinyinResponseSchema = z.object({
   ),
 });
 
+const API_TIMEOUT_MS = 10_000;
+
+// Wraps fetch with an AbortController timeout so API calls fail fast when the
+// network is unavailable or the server's auth validation hangs (e.g. Stack
+// reaching its remote backend while the device has no internet access).
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 async function parseJson<T>(res: Response, schema: z.ZodType<T>): Promise<T> {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return schema.parse(await res.json());
 }
 
 export async function fetchAllWords(): Promise<Word[]> {
-  const res = await fetch('/api/words');
+  const res = await fetchWithTimeout('/api/words');
   return (await parseJson(res, FetchAllWordsResponseSchema)).words;
 }
 
 export async function putWords(words: Word[]): Promise<void> {
   if (words.length === 0) return;
-  const res = await fetch('/api/words', {
+  const res = await fetchWithTimeout('/api/words', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ words }),
@@ -71,7 +84,7 @@ export async function classifyWords(
   chinese: string[],
 ): Promise<{ word: string; category: CategoryId }[]> {
   if (chinese.length === 0) return [];
-  const res = await fetch('/api/words/classify', {
+  const res = await fetchWithTimeout('/api/words/classify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chinese }),
@@ -86,7 +99,7 @@ export async function translateWords(
   chinese: string[],
 ): Promise<{ word: string; english: string }[]> {
   if (chinese.length === 0) return [];
-  const res = await fetch('/api/words/translate', {
+  const res = await fetchWithTimeout('/api/words/translate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ words: chinese }),
@@ -99,7 +112,7 @@ export async function examplifyWords(
   knownWords: string[],
 ): Promise<{ word: string; example_chinese: string; example_pinyin: string }[]> {
   if (targets.length === 0) return [];
-  const res = await fetch('/api/words/examplify', {
+  const res = await fetchWithTimeout('/api/words/examplify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ words: targets, knownWords }),
@@ -111,7 +124,7 @@ export async function generatePinyin(
   chinese: string[],
 ): Promise<{ word: string; pinyin: string }[]> {
   if (chinese.length === 0) return [];
-  const res = await fetch('/api/words/pinyin', {
+  const res = await fetchWithTimeout('/api/words/pinyin', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chinese }),
