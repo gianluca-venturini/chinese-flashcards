@@ -12,6 +12,7 @@ import { getDueWords } from "@/lib/dueWords";
 
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
+const MAX_REVIEW_WORDS = 10;
 
 export default function Home() {
   /** List of words that should be reviewed in this session. */
@@ -41,7 +42,7 @@ export default function Home() {
       }
       try {
         const allWords = await getAllWords();
-        setWords(getDueWords(allWords, new Date()));
+        setWords(getDueWords(allWords, new Date(), MAX_REVIEW_WORDS));
       } catch (err) {
         console.error('Error loading words from storage:', err);
         setError('Failed to load words.');
@@ -93,8 +94,11 @@ export default function Home() {
   const submitReview = useCallback((chinese: string, q: number) => {
     submitReviewLocal(chinese, q).catch((err) => {
       console.error('Review sync error:', err);
-      setSyncError('Failed to sync review. Local state saved.');
-      setTimeout(() => setSyncError(null), 5000);
+      // Suppress the toast when offline — the offline badge already signals the state.
+      if (navigator.onLine) {
+        setSyncError('Failed to sync review. Local state saved.');
+        setTimeout(() => setSyncError(null), 5000);
+      }
     });
   }, []);
 
