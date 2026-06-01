@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { StackHandler } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
 
@@ -7,6 +8,10 @@ type PageProps = {
 };
 
 export default async function Handler(props: PageProps) {
-  return <StackHandler app={stackServerApp} fullPage routeProps={props} />;
+  return (
+    <Suspense>
+      <StackHandler app={stackServerApp} fullPage routeProps={props} />
+    </Suspense>
+  );
 }
 
