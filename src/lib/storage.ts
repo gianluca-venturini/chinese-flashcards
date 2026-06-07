@@ -1,10 +1,38 @@
 import { type Word, WordSchema, SR_DEFAULTS } from './schema';
 
 const DB_NAME = 'chinese-flashcards';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'words';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+// Schema migrations keyed by the version they introduce. Each step runs when
+// the user's existing DB is older than its key. Add new steps with the next
+// version number and bump DB_VERSION.
+function runMigrations(
+  db: IDBDatabase,
+  tx: IDBTransaction,
+  oldVersion: number,
+): void {
+  if (oldVersion < 1) {
+    db.createObjectStore(STORE, { keyPath: 'chinese' });
+  }
+  if (oldVersion < 2) {
+    // Backfill `deprecated: false` on every existing record so they parse
+    // through WordSchema (which now requires the field) on next read.
+    const store = tx.objectStore(STORE);
+    const cursorReq = store.openCursor();
+    cursorReq.onsuccess = (ev) => {
+      const cursor = (ev.target as IDBRequest<IDBCursorWithValue>).result;
+      if (!cursor) return;
+      const value = cursor.value;
+      if (value && typeof value === 'object' && !('deprecated' in value)) {
+        cursor.update({ ...value, deprecated: false });
+      }
+      cursor.continue();
+    };
+  }
+}
 
 function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
@@ -12,9 +40,12 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = (e) => {
       const db = (e.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'chinese' });
+      const tx = (e.target as IDBOpenDBRequest).transaction;
+      if (!tx) {
+        reject(new Error('indexedDB.open onupgradeneeded missing transaction'));
+        return;
       }
+      runMigrations(db, tx, e.oldVersion);
     };
     req.onsuccess = (e) => resolve((e.target as IDBOpenDBRequest).result);
     req.onerror = (e) => reject((e.target as IDBOpenDBRequest).error);
