@@ -195,6 +195,31 @@ describe('syncBidirectional', () => {
     expect(storedA!.english).toBe('local'); // not overwritten
   });
 
+  test('flipping deprecated via putWord causes the entry to appear in toPush', async () => {
+    const remote = { ...WORD_A, updated_at: '2020-01-01T00:00:00.000Z', deprecated: false };
+    await putWordsRaw([remote]); // seed IDB matching remote
+    // flip deprecated through putWord — bumps updated_at to now
+    const local = await getWord(WORD_A.chinese);
+    expect(local).toBeDefined();
+    await putWord({ ...local!, deprecated: true });
+
+    const localAfter = await getWord(WORD_A.chinese);
+    const { toPull, toPush } = diffWords([localAfter!], [remote]);
+    expect(toPull).toHaveLength(0);
+    expect(toPush).toHaveLength(1);
+    expect(toPush[0].deprecated).toBe(true);
+  });
+
+  test('pulling a remote deprecated record overwrites a local non-deprecated record when remote is newer', async () => {
+    const local = { ...WORD_A, deprecated: false, updated_at: '2024-01-01T00:00:00.000Z' };
+    await putWordsRaw([local]);
+    const remote = { ...WORD_A, deprecated: true, updated_at: '2024-06-01T00:00:00.000Z' };
+    setupFetch({ words: [remote] });
+    await syncFromServer();
+    const stored = await getWord(WORD_A.chinese);
+    expect(stored!.deprecated).toBe(true);
+  });
+
   test('returns zero counts when already in sync', async () => {
     const fixedTs = '2024-01-01T00:00:00.000Z';
     const word = { ...WORD_A, updated_at: fixedTs };

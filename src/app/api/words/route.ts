@@ -56,12 +56,14 @@ export async function PUT(request: NextRequest) {
         await sql`
           INSERT INTO words (
             chinese, user_id, pinyin, english, created_at, n, ef, i,
-            category, example_chinese, example_pinyin, last_reviewed_at, updated_at
+            category, example_chinese, example_pinyin, last_reviewed_at, updated_at,
+            deprecated
           ) VALUES (
             ${word.chinese}, ${user.id}, ${word.pinyin}, ${word.english},
             ${word.created_at}, ${word.n}, ${word.ef}, ${word.i},
             ${word.category}, ${word.example_chinese}, ${word.example_pinyin},
-            ${word.last_reviewed_at}, ${word.updated_at}
+            ${word.last_reviewed_at}, ${word.updated_at},
+            ${word.deprecated}
           )
           ON CONFLICT (chinese, user_id) DO UPDATE SET
             pinyin = EXCLUDED.pinyin,
@@ -73,7 +75,8 @@ export async function PUT(request: NextRequest) {
             example_chinese = EXCLUDED.example_chinese,
             example_pinyin = EXCLUDED.example_pinyin,
             last_reviewed_at = EXCLUDED.last_reviewed_at,
-            updated_at = EXCLUDED.updated_at
+            updated_at = EXCLUDED.updated_at,
+            deprecated = EXCLUDED.deprecated
         `;
       }
     });

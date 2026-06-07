@@ -14,6 +14,7 @@ const VALID_WORD = {
   example_pinyin: 'nǐ hǎo ma?',
   last_reviewed_at: '2024-01-14T08:00:00.000Z',
   updated_at: '2024-01-15T10:30:00.000Z',
+  deprecated: false,
 };
 
 describe('WordSchema', () => {
@@ -78,6 +79,22 @@ describe('WordSchema', () => {
     expect(() => WordSchema.parse({ ...VALID_WORD, last_reviewed_at: null })).not.toThrow();
     expect(() => WordSchema.parse({ ...VALID_WORD, last_reviewed_at: '2024-01-15T10:30:00.000Z' })).not.toThrow();
   });
+
+  test('deprecated accepts true and false', () => {
+    expect(() => WordSchema.parse({ ...VALID_WORD, deprecated: true })).not.toThrow();
+    expect(() => WordSchema.parse({ ...VALID_WORD, deprecated: false })).not.toThrow();
+  });
+
+  test('deprecated rejects non-boolean values', () => {
+    expect(() => WordSchema.parse({ ...VALID_WORD, deprecated: 'true' })).toThrow();
+    expect(() => WordSchema.parse({ ...VALID_WORD, deprecated: 1 })).toThrow();
+    expect(() => WordSchema.parse({ ...VALID_WORD, deprecated: null })).toThrow();
+  });
+
+  test('missing deprecated fails parsing (no implicit default)', () => {
+    const { deprecated: _deprecated, ...withoutDeprecated } = VALID_WORD;
+    expect(() => WordSchema.parse(withoutDeprecated)).toThrow();
+  });
 });
 
 describe('newWord', () => {
@@ -120,5 +137,10 @@ describe('newWord', () => {
     expect(word.created_at >= before).toBe(true);
     expect(word.created_at <= after).toBe(true);
     expect(word.updated_at).toBe(word.created_at);
+  });
+
+  test('newWord starts non-deprecated', () => {
+    const word = newWord({ chinese: '好', pinyin: 'hǎo' });
+    expect(word.deprecated).toBe(false);
   });
 });

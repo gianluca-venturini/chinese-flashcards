@@ -96,6 +96,14 @@ describe('resetSr', () => {
     expect(fetched!.ef).toBe(SR_DEFAULTS.ef);
     expect(fetched!.i).toBe(SR_DEFAULTS.i);
   });
+
+  test('leaves deprecated unchanged', async () => {
+    await putWord({ ...WORD_A, deprecated: true });
+    await putWord({ ...WORD_B, deprecated: false });
+    const modified = await resetSr();
+    expect(modified.find((w) => w.chinese === WORD_A.chinese)!.deprecated).toBe(true);
+    expect(modified.find((w) => w.chinese === WORD_B.chinese)!.deprecated).toBe(false);
+  });
 });
 
 describe('putWordsRaw', () => {
