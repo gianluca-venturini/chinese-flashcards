@@ -39,6 +39,17 @@ describe('isWordDue', () => {
     const word = makeWord({ last_reviewed_at: lastReviewed, i: 6 });
     expect(isWordDue(word, NOW)).toBe(false);
   });
+
+  test('deprecated never-reviewed word is not due', () => {
+    const word = makeWord({ last_reviewed_at: null, deprecated: true });
+    expect(isWordDue(word, NOW)).toBe(false);
+  });
+
+  test('deprecated long-overdue word is not due', () => {
+    const lastReviewed = new Date(NOW.getTime() - 365 * MS_PER_DAY).toISOString();
+    const word = makeWord({ last_reviewed_at: lastReviewed, i: 1, deprecated: true });
+    expect(isWordDue(word, NOW)).toBe(false);
+  });
 });
 
 describe('getDueWords', () => {
@@ -93,5 +104,17 @@ describe('getDueWords', () => {
       makeWord({ chinese: String(k), pinyin: String(k), last_reviewed_at: null }),
     );
     expect(getDueWords(words, NOW)).toHaveLength(5);
+  });
+
+  test('deprecated due words are excluded', () => {
+    const active = makeWord({ chinese: '一', pinyin: 'yī', last_reviewed_at: null });
+    const deprecated = makeWord({
+      chinese: '二',
+      pinyin: 'èr',
+      last_reviewed_at: null,
+      deprecated: true,
+    });
+    const result = getDueWords([active, deprecated], NOW);
+    expect(result.map((w) => w.chinese)).toEqual(['一']);
   });
 });

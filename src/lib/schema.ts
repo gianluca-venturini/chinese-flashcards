@@ -14,6 +14,7 @@ export const WordSchema = z.object({
   example_pinyin: z.string().nullable(),
   last_reviewed_at: z.iso.datetime().nullable(),
   updated_at: z.iso.datetime().nullable(),
+  deprecated: z.boolean(),
 });
 
 export type Word = z.infer<typeof WordSchema>;
@@ -41,6 +42,7 @@ export function newWord(input: {
     example_pinyin: null,
     created_at: now,
     updated_at: now,
+    deprecated: false,
     ...SR_DEFAULTS,
   };
 }

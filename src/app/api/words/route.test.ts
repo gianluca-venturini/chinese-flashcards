@@ -15,6 +15,7 @@ const FULL_ROW = {
   example_pinyin: 'nǐ hǎo ma?',
   last_reviewed_at: new Date('2024-01-14T08:00:00.000Z'),
   updated_at: new Date('2024-01-15T10:00:00.000Z'),
+  deprecated: false,
 };
 
 describe('rowToWord', () => {
@@ -57,6 +58,11 @@ describe('rowToWord', () => {
       example_pinyin: null,
     };
     expect(() => rowToWord(row)).not.toThrow();
+  });
+
+  test('maps deprecated true and false from native boolean rows', () => {
+    expect(rowToWord({ ...FULL_ROW, deprecated: true }).deprecated).toBe(true);
+    expect(rowToWord({ ...FULL_ROW, deprecated: false }).deprecated).toBe(false);
   });
 });
 
