@@ -28,6 +28,7 @@ async function seed() {
         example_pinyin TEXT,
         last_reviewed_at TIMESTAMP WITH TIME ZONE,
         updated_at TIMESTAMP WITH TIME ZONE,
+        deprecated BOOLEAN NOT NULL DEFAULT FALSE,
         PRIMARY KEY (chinese, user_id),
         CONSTRAINT fk_user
           FOREIGN KEY (user_id)
@@ -41,6 +42,7 @@ async function seed() {
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_pinyin TEXT`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP WITH TIME ZONE`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE`;
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS deprecated BOOLEAN NOT NULL DEFAULT FALSE`;
     await sql`ALTER TABLE words ALTER COLUMN english DROP NOT NULL`;
 
     console.log('✅ Database seeded successfully!');

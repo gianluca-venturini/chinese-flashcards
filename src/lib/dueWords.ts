@@ -3,6 +3,7 @@ import { type Word } from './schema';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function isWordDue(word: Word, now: Date): boolean {
+  if (word.deprecated) return false;
   if (word.last_reviewed_at === null) return true;
   return now.getTime() - new Date(word.last_reviewed_at).getTime() >= word.i * MS_PER_DAY;
 }

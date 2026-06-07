@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type Word } from "@/lib/schema";
 import { newWord } from "@/lib/schema";
 import { CategoryId } from "@/lib/categories";
@@ -17,6 +17,7 @@ export default function WordsPage() {
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [viewMode, setViewMode] = useState<'tiles' | 'table'>('tiles');
   const [showAdvancedColumns, setShowAdvancedColumns] = useState<boolean>(false);
+  const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
@@ -27,6 +28,11 @@ export default function WordsPage() {
   const [newEnglish, setNewEnglish] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [csvCopied, setCsvCopied] = useState<boolean>(false);
+
+  const visibleWords = useMemo(
+    () => (showDeprecated ? words : words.filter((w) => !w.deprecated)),
+    [words, showDeprecated],
+  );
 
   async function refreshWords() {
     const allWords = await getAllWords();
@@ -57,6 +63,27 @@ export default function WordsPage() {
   const handleWordClick = (word: Word) => {
     setEditingWord(word);
     setEnglishValue(word.english ?? "");
+  };
+
+  const handleToggleDeprecated = async (word: Word) => {
+    try {
+      const updated = await putWord({ ...word, deprecated: !word.deprecated });
+      try {
+        await ensureWords([updated]);
+      } catch {
+        // Local toggle preserved; will sync later
+      }
+      await refreshWords();
+      setSelectedWords((prev) => {
+        if (!prev.has(word.chinese)) return prev;
+        const next = new Set(prev);
+        next.delete(word.chinese);
+        return next;
+      });
+    } catch (err) {
+      console.error('Error toggling deprecated:', err);
+      alert('Failed to update word');
+    }
   };
 
   const handleDialogClose = () => {
@@ -99,10 +126,10 @@ export default function WordsPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedWords.size === words.length) {
+    if (selectedWords.size === visibleWords.length) {
       setSelectedWords(new Set());
     } else {
-      setSelectedWords(new Set(words.map((w) => w.chinese)));
+      setSelectedWords(new Set(visibleWords.map((w) => w.chinese)));
     }
   };
 
@@ -242,7 +269,7 @@ export default function WordsPage() {
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-            All Words ({words.length})
+            All Words ({visibleWords.length})
           </h1>
           <div className="flex items-center gap-2">
           <button
@@ -282,7 +309,7 @@ export default function WordsPage() {
         {viewMode === 'tiles' ? (
         <>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-1 relative">
-          {words.map((word, index) => {
+          {visibleWords.map((word, index) => {
             const categoryColor =
               CATEGORY_COLORS[word.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR;
             const charCount = word.chinese.length;
@@ -290,7 +317,7 @@ export default function WordsPage() {
               <div
                 key={`${word.chinese}-${index}`}
                 data-word-card
-                className="flex items-center justify-center rounded p-0.5 shadow-sm transition-shadow hover:shadow-md cursor-pointer relative"
+                className={`flex items-center justify-center rounded p-0.5 shadow-sm transition-shadow hover:shadow-md cursor-pointer relative ${word.deprecated ? 'opacity-40' : ''}`}
                 style={{
                   backgroundColor: categoryColor,
                   gridColumn: charCount > 1 ? `span ${Math.min(charCount, 3)}` : 'span 1',
@@ -311,7 +338,7 @@ export default function WordsPage() {
                   setHoveredWord(word);
                 }}
               >
-                <span className="text-[10px] font-semibold text-zinc-900 sm:text-xs whitespace-nowrap">
+                <span className={`text-[10px] font-semibold text-zinc-900 sm:text-xs whitespace-nowrap ${word.deprecated ? 'line-through' : ''}`}>
                   {word.chinese}
                 </span>
               </div>
@@ -366,7 +393,7 @@ export default function WordsPage() {
           </button>
           <button
             onClick={() => {
-              const word = words.find((w) => selectedWords.has(w.chinese));
+              const word = visibleWords.find((w) => selectedWords.has(w.chinese));
               if (word) handleWordClick(word);
             }}
             disabled={selectedWords.size !== 1 || isTranslating}
@@ -381,7 +408,18 @@ export default function WordsPage() {
           >
             {csvCopied ? 'Copied!' : 'Copy CSV'}
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-4">
+            <label className="text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer flex items-center gap-2">
+              <span>Show deprecated</span>
+              <button
+                onClick={() => setShowDeprecated(!showDeprecated)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showDeprecated ? 'bg-blue-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showDeprecated ? 'translate-x-6' : 'translate-x-1'}`}
+                />
+              </button>
+            </label>
             <label className="text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer flex items-center gap-2">
               <span>Show advanced</span>
               <button
@@ -402,7 +440,7 @@ export default function WordsPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-10">
                   <input
                     type="checkbox"
-                    checked={selectedWords.size === words.length && words.length > 0}
+                    checked={selectedWords.size === visibleWords.length && visibleWords.length > 0}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
                   />
@@ -490,13 +528,14 @@ export default function WordsPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Example</th>
                   </>
                 )}
+                <th className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-32">Status</th>
               </tr>
             </thead>
             <tbody>
-              {words.map((word, index) => (
+              {visibleWords.map((word, index) => (
                 <tr
                   key={`${word.chinese}-${index}`}
-                  className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                  className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
                   onClick={() => toggleWordSelection(word.chinese)}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -507,7 +546,7 @@ export default function WordsPage() {
                       className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{word.chinese}</td>
+                  <td className={`px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium ${word.deprecated ? 'line-through' : ''}`}>{word.chinese}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">{word.pinyin}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                     {word.english ? getShortDefinition(word.english) : ''}
@@ -539,6 +578,18 @@ export default function WordsPage() {
                       </td>
                     </>
                   )}
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => handleToggleDeprecated(word)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                        word.deprecated
+                          ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                          : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                      }`}
+                    >
+                      {word.deprecated ? 'Restore' : 'Deprecate'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
