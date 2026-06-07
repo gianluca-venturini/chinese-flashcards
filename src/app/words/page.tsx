@@ -26,6 +26,7 @@ export default function WordsPage() {
   const [newChinese, setNewChinese] = useState<string>("");
   const [newEnglish, setNewEnglish] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [csvCopied, setCsvCopied] = useState<boolean>(false);
 
   async function refreshWords() {
     const allWords = await getAllWords();
@@ -175,6 +176,13 @@ export default function WordsPage() {
     } finally {
       setIsGeneratingExamples(false);
     }
+  };
+
+  const handleCopyCSV = async () => {
+    const csv = words.map((w) => w.chinese).join(',');
+    await navigator.clipboard.writeText(csv);
+    setCsvCopied(true);
+    setTimeout(() => setCsvCopied(false), 2000);
   };
 
   const handleAddWord = async (e: React.FormEvent) => {
@@ -365,6 +373,13 @@ export default function WordsPage() {
             className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Edit manually
+          </button>
+          <button
+            onClick={handleCopyCSV}
+            disabled={words.length === 0}
+            className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {csvCopied ? 'Copied!' : 'Copy CSV'}
           </button>
           <div className="ml-auto flex items-center gap-2">
             <label className="text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer flex items-center gap-2">
