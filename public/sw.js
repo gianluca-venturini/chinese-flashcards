@@ -11,6 +11,11 @@ const PRECACHE_REQUIRED = ['/offline.html', '/manifest.webmanifest'];
 // server error on one route) doesn't abort the whole install.
 const PRECACHE_PAGES = ['/', '/words', '/admin'];
 
+// Bundled data files — precached best-effort so they are available offline
+// from the first install. The pinyin table is large-ish (~157 KB) but is
+// immutable for a given app version (cache busts via CACHE_VERSION).
+const PRECACHE_DATA = ['/data/hanzi-pinyin-table.json'];
+
 const NETWORK_TIMEOUT_MS = 5000;
 
 // ─── Install ──────────────────────────────────────────────────────────────────
@@ -21,6 +26,8 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(SHELL_CACHE);
       await cache.addAll(PRECACHE_REQUIRED);
       await Promise.allSettled(PRECACHE_PAGES.map((url) => cache.add(url)));
+      const staticCache = await caches.open(STATIC_CACHE);
+      await Promise.allSettled(PRECACHE_DATA.map((url) => staticCache.add(url)));
       await self.skipWaiting();
     })(),
   );
@@ -77,6 +84,22 @@ self.addEventListener('fetch', (event) => {
     pathname.startsWith('/auth/') ||
     request.method !== 'GET'
   ) {
+    return;
+  }
+
+  // CacheFirst: bundled data files under /data/ (e.g. the pinyin table).
+  // They are versioned in lockstep with the app via CACHE_VERSION, so once
+  // cached they can be served without ever touching the network again.
+  if (pathname.startsWith('/data/')) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        const cached = await cache.match(request, { ignoreVary: true });
+        if (cached) return cached;
+        const res = await fetch(request);
+        if (res.ok) cache.put(request, res.clone());
+        return res;
+      }),
+    );
     return;
   }
 
