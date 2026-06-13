@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { debounce } from "lodash";
 import { getShortDefinition } from "@/lib/formatDefinition";
 import { CategoryId } from "@/lib/categories";
@@ -9,12 +10,16 @@ import { getAllWords } from "@/lib/storage";
 import { syncFromServer } from "@/lib/sync";
 import { submitReview as submitReviewLocal } from "@/lib/review";
 import { getDueWords } from "@/lib/dueWords";
+import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
 
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
 const DEFAULT_SESSION_SIZE = 10;
 
-export default function Home() {
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   /** List of words that should be reviewed in this session. */
   const [words, setWords] = useState<Word[]>([]);
   /** List of words that should be reviewed again in the end of this session. */
@@ -29,9 +34,6 @@ export default function Home() {
   const [isSwiping, setIsSwiping] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
   const [screenWidth, setScreenWidth] = useState<number>(800); // Default fallback value
-  const [sessionSize, setSessionSize] = useState<number>(DEFAULT_SESSION_SIZE);
-  const [showCustomDialog, setShowCustomDialog] = useState<boolean>(false);
-  const [customSizeInput, setCustomSizeInput] = useState<string>(String(DEFAULT_SESSION_SIZE));
 
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
@@ -60,9 +62,23 @@ export default function Home() {
     }
   }, []);
 
+  // Initial-mount flag so we only auto-start once when there's no customSize param.
+  const initializedRef = useRef<boolean>(false);
+
   useEffect(() => {
-    void startSession(DEFAULT_SESSION_SIZE);
-  }, [startSession]);
+    const customSizeParam = searchParams.get(CUSTOM_SIZE_PARAM);
+    if (customSizeParam !== null) {
+      const parsed = parseInt(customSizeParam, 10);
+      const size = Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_SESSION_SIZE;
+      initializedRef.current = true;
+      void startSession(size);
+      // Clean the URL so a refresh doesn't replay the custom session.
+      router.replace('/');
+    } else if (!initializedRef.current) {
+      initializedRef.current = true;
+      void startSession(DEFAULT_SESSION_SIZE);
+    }
+  }, [searchParams, router, startSession]);
 
   useEffect(() => {
     // Initialize screen width after mount to avoid hydration mismatch
@@ -160,48 +176,39 @@ export default function Home() {
     }
   }, [isSwiping]);
 
-  const openCustomDialog = useCallback(() => {
-    setCustomSizeInput(String(sessionSize));
-    setShowCustomDialog(true);
-  }, [sessionSize]);
-
-  const closeCustomDialog = useCallback(() => {
-    setShowCustomDialog(false);
-  }, []);
-
-  const parsedCustomSize = parseInt(customSizeInput, 10);
-  const isCustomSizeValid = Number.isFinite(parsedCustomSize) && parsedCustomSize >= 1;
-
-  const handleCustomSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const parsed = parseInt(customSizeInput, 10);
-    if (!Number.isFinite(parsed) || parsed < 1) return;
-    setSessionSize(parsed);
-    setShowCustomDialog(false);
-    void startSession(parsed);
-  }, [customSizeInput, startSession]);
-
-  let content: React.ReactNode;
   if (loading) {
-    content = (
-      <div className="flex flex-1 w-full items-center justify-center p-4">
+    return (
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-zinc-600 dark:text-zinc-400">Loading flashcards...</div>
       </div>
     );
-  } else if (error) {
-    content = (
-      <div className="flex flex-1 w-full items-center justify-center p-4">
-        <div className="text-xl text-red-600 dark:text-red-400">{error}</div>
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+        <div className="text-xl text-red-600 dark:text-red-400">
+          {error}
+        </div>
       </div>
     );
-  } else if (nextWords.length === 0) {
-    content = (
-      <div className="flex flex-1 w-full items-center justify-center p-4">
+  }
+
+  if (nextWords.length === 0) {
+    return (
+      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
         <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
       </div>
     );
-  } else {
-    content = (
+  }
+
+  return (
+    <div className="flex flex-1 w-full select-none flex-col items-center justify-center overflow-hidden bg-zinc-50 font-sans dark:bg-black">
+      {syncError && (
+        <div className="w-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm text-center py-1 px-4">
+          {syncError}
+        </div>
+      )}
       <div className="flex flex-1 w-full items-center justify-center p-4">
         <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
           {nextWords.map((currentWord, index) => {
@@ -290,70 +297,14 @@ export default function Home() {
           })}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="relative flex flex-1 w-full select-none flex-col items-center justify-center overflow-hidden bg-zinc-50 font-sans dark:bg-black">
-      {!loading && (
-        <button
-          onClick={openCustomDialog}
-          className="absolute top-4 right-4 z-10 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors shadow"
-        >
-          Custom
-        </button>
-      )}
-      {syncError && (
-        <div className="w-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm text-center py-1 px-4">
-          {syncError}
-        </div>
-      )}
-      {content}
-      {showCustomDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-          onClick={closeCustomDialog}
-        >
-          <div
-            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 select-text"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-              Custom Session
-            </h2>
-            <form onSubmit={handleCustomSubmit}>
-              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                How many words?
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={customSizeInput}
-                onChange={(e) => setCustomSizeInput(e.target.value)}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-                required
-                autoFocus
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={closeCustomDialog}
-                  className="px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded-md hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!isCustomSizeValid}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Start
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }
