@@ -4,6 +4,7 @@ import UploadButton from "../components/UploadButton";
 import ClassifyButton from "../components/ClassifyButton";
 import ResetStatsButton from "../components/ResetStatsButton";
 import SyncSection from "../components/SyncSection";
+import WordStats from "../components/WordStats";
 
 export default function AdminPage() {
   return (
@@ -26,7 +27,10 @@ export default function AdminPage() {
             <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
               Statistics
             </h2>
-            <ResetStatsButton />
+            <div className="flex flex-col gap-4">
+              <WordStats />
+              <ResetStatsButton />
+            </div>
           </div>
           <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-zinc-900">
             <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">
