@@ -7,6 +7,7 @@ import Link from "next/link";
 import SignOutButton from "@/app/components/SignOutButton";
 import ServiceWorkerRegistrar from "@/app/components/ServiceWorkerRegistrar";
 import OfflineBadge from "@/app/components/OfflineBadge";
+import CustomSessionMenuItem from "@/app/components/CustomSessionMenuItem";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +56,7 @@ async function UserInfoBar() {
         Welcome, {user.displayName || user.primaryEmail}!
       </span>
       <div className="flex items-center gap-4">
+        <CustomSessionMenuItem />
         <Link
           href="/words"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"

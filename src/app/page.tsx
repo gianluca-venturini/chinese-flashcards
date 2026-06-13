@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { debounce } from "lodash";
 import { getShortDefinition } from "@/lib/formatDefinition";
 import { CategoryId } from "@/lib/categories";
@@ -9,12 +10,16 @@ import { getAllWords } from "@/lib/storage";
 import { syncFromServer } from "@/lib/sync";
 import { submitReview as submitReviewLocal } from "@/lib/review";
 import { getDueWords } from "@/lib/dueWords";
+import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
 
 const ANIMATION_DURATION_MS = 200;
 const MAX_WORDS_STACK = 3;
-const MAX_REVIEW_WORDS = 10;
+const DEFAULT_SESSION_SIZE = 10;
 
-export default function Home() {
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   /** List of words that should be reviewed in this session. */
   const [words, setWords] = useState<Word[]>([]);
   /** List of words that should be reviewed again in the end of this session. */
@@ -33,26 +38,47 @@ export default function Home() {
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
-  useEffect(() => {
-    async function loadWords() {
-      try {
-        await syncFromServer();
-      } catch (err) {
-        console.warn('Sync from server failed, using local data:', err);
-      }
-      try {
-        const allWords = await getAllWords();
-        setWords(getDueWords(allWords, new Date(), MAX_REVIEW_WORDS));
-      } catch (err) {
-        console.error('Error loading words from storage:', err);
-        setError('Failed to load words.');
-      } finally {
-        setLoading(false);
-      }
+  const startSession = useCallback(async (size: number) => {
+    setLoading(true);
+    setError(null);
+    setRepeatWords([]);
+    setCurrentIndex(0);
+    setIsRevealed(false);
+    setSwipeOffset(0);
+    setIsSwiping(false);
+    try {
+      await syncFromServer();
+    } catch (err) {
+      console.warn('Sync from server failed, using local data:', err);
     }
-
-    void loadWords();
+    try {
+      const allWords = await getAllWords();
+      setWords(getDueWords(allWords, new Date(), size));
+    } catch (err) {
+      console.error('Error loading words from storage:', err);
+      setError('Failed to load words.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial-mount flag so we only auto-start once when there's no customSize param.
+  const initializedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const customSizeParam = searchParams.get(CUSTOM_SIZE_PARAM);
+    if (customSizeParam !== null) {
+      const parsed = parseInt(customSizeParam, 10);
+      const size = Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_SESSION_SIZE;
+      initializedRef.current = true;
+      void startSession(size);
+      // Clean the URL so a refresh doesn't replay the custom session.
+      router.replace('/');
+    } else if (!initializedRef.current) {
+      initializedRef.current = true;
+      void startSession(DEFAULT_SESSION_SIZE);
+    }
+  }, [searchParams, router, startSession]);
 
   useEffect(() => {
     // Initialize screen width after mount to avoid hydration mismatch
@@ -184,93 +210,101 @@ export default function Home() {
         </div>
       )}
       <div className="flex flex-1 w-full items-center justify-center p-4">
-      <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
-        {nextWords.map((currentWord, index) => {
-          const isTopCard = index === 0;
-          const scale = 1 - (index * 0.05);
-          const translateY = -(index * 10);
+        <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
+          {nextWords.map((currentWord, index) => {
+            const isTopCard = index === 0;
+            const scale = 1 - (index * 0.05);
+            const translateY = -(index * 10);
 
-          return (
-            <div
-              key={currentIndex + index}
-              onMouseDown={isTopCard ? (e) => handleSwipeStart(e.clientX) : undefined}
-              onMouseMove={isTopCard ? (e) => handleSwipeMove(e.clientX) : undefined}
-              onMouseUp={isTopCard ? handleSwipeEnd : undefined}
-              onMouseLeave={isTopCard ? handleMouseLeave : undefined}
-              onTouchStart={isTopCard ? (e) => handleSwipeStart(e.touches[0].clientX) : undefined}
-              onTouchMove={isTopCard ? (e) => handleSwipeMove(e.touches[0].clientX) : undefined}
-              onTouchEnd={isTopCard ? handleSwipeEnd : undefined}
-              className="absolute left-0 top-0 flex w-full h-full cursor-pointer flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
-              style={{
-                zIndex: MAX_WORDS_STACK - index,
-                transform: isTopCard
-                  ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`
-                  : `translateY(${translateY}px) scale(${scale})`,
-                transition: isSwiping && isTopCard ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
-                opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X
-                  ? 1
-                  : isTopCard
-                    ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
-                    : 1,
-                pointerEvents: isTopCard ? 'auto' : 'none',
-                backgroundColor: CATEGORY_COLORS[currentWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
-              }}
-            >
-              <div className="relative flex flex-col items-center">
-                <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
-                  {currentWord.chinese}
-                </h1>
-                <p
-                  className={`absolute top-full mt-4 whitespace-nowrap text-xl text-zinc-900 transition-opacity duration-75 sm:mt-6 sm:text-2xl ${
-                    isTopCard ? (isRevealed ? "opacity-100" : "opacity-50") : "opacity-0"
-                  }`}
-                >
-                  {currentWord.pinyin}
-                </p>
-                <p
-                  className={`absolute top-full mt-16 whitespace-nowrap text-lg text-zinc-900 transition-opacity duration-75 sm:mt-20 sm:text-xl ${
-                    isTopCard && isRevealed ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  {currentWord.english ? getShortDefinition(currentWord.english) : ''}
-                </p>
-                {currentWord.example_chinese && (
+            return (
+              <div
+                key={currentIndex + index}
+                onMouseDown={isTopCard ? (e) => handleSwipeStart(e.clientX) : undefined}
+                onMouseMove={isTopCard ? (e) => handleSwipeMove(e.clientX) : undefined}
+                onMouseUp={isTopCard ? handleSwipeEnd : undefined}
+                onMouseLeave={isTopCard ? handleMouseLeave : undefined}
+                onTouchStart={isTopCard ? (e) => handleSwipeStart(e.touches[0].clientX) : undefined}
+                onTouchMove={isTopCard ? (e) => handleSwipeMove(e.touches[0].clientX) : undefined}
+                onTouchEnd={isTopCard ? handleSwipeEnd : undefined}
+                className="absolute left-0 top-0 flex w-full h-full cursor-pointer flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
+                style={{
+                  zIndex: MAX_WORDS_STACK - index,
+                  transform: isTopCard
+                    ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`
+                    : `translateY(${translateY}px) scale(${scale})`,
+                  transition: isSwiping && isTopCard ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
+                  opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X
+                    ? 1
+                    : isTopCard
+                      ? 1-(Math.abs(swipeOffset)- SWIPE_THRESHOLD_X)/(MAX_SWIPE_OFFSET_X-SWIPE_THRESHOLD_X)
+                      : 1,
+                  pointerEvents: isTopCard ? 'auto' : 'none',
+                  backgroundColor: CATEGORY_COLORS[currentWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
+                }}
+              >
+                <div className="relative flex flex-col items-center">
+                  <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
+                    {currentWord.chinese}
+                  </h1>
                   <p
-                    className={`absolute top-full mt-28 w-[80vw] max-w-[600px] text-center text-lg text-zinc-800 transition-opacity duration-75 sm:mt-36 sm:text-xl ${
-                      isTopCard ? "opacity-70" : "opacity-0"
+                    className={`absolute top-full mt-4 whitespace-nowrap text-xl text-zinc-900 transition-opacity duration-75 sm:mt-6 sm:text-2xl ${
+                      isTopCard ? (isRevealed ? "opacity-100" : "opacity-50") : "opacity-0"
                     }`}
                   >
-                    <span className="block">{(() => {
-                      const idx = currentWord.example_chinese.indexOf(currentWord.chinese);
-                      if (idx === -1) return currentWord.example_chinese;
-                      return <>{currentWord.example_chinese.slice(0, idx)}<strong>{currentWord.chinese}</strong>{currentWord.example_chinese.slice(idx + currentWord.chinese.length)}</>;
-                    })()}</span>
-                    <span className="block mt-1 text-base text-zinc-700 sm:text-lg">{(() => {
-                      if (!currentWord.example_pinyin) return null;
-                      const text = currentWord.example_pinyin;
-                      const search = currentWord.pinyin;
-                      const textNoSpaces = text.replace(/ /g, '').toLowerCase();
-                      const searchNoSpaces = search.replace(/ /g, '').toLowerCase();
-                      const idx = textNoSpaces.indexOf(searchNoSpaces);
-                      if (idx === -1) return text;
-                      // Map spaceless match indices back to original string positions
-                      let spaceless = 0, startOrig = -1, endOrig = -1;
-                      for (let i = 0; i <= text.length; i++) {
-                        if (spaceless === idx && startOrig === -1) startOrig = i;
-                        if (spaceless === idx + searchNoSpaces.length) { endOrig = i; break; }
-                        if (i < text.length && text[i] !== ' ') spaceless++;
-                      }
-                      if (startOrig === -1 || endOrig === -1) return text;
-                      return <>{text.slice(0, startOrig)}<strong>{text.slice(startOrig, endOrig)}</strong>{text.slice(endOrig)}</>;
-                    })()}</span>
+                    {currentWord.pinyin}
                   </p>
-                )}
+                  <p
+                    className={`absolute top-full mt-16 whitespace-nowrap text-lg text-zinc-900 transition-opacity duration-75 sm:mt-20 sm:text-xl ${
+                      isTopCard && isRevealed ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {currentWord.english ? getShortDefinition(currentWord.english) : ''}
+                  </p>
+                  {currentWord.example_chinese && (
+                    <p
+                      className={`absolute top-full mt-28 w-[80vw] max-w-[600px] text-center text-lg text-zinc-800 transition-opacity duration-75 sm:mt-36 sm:text-xl ${
+                        isTopCard ? "opacity-70" : "opacity-0"
+                      }`}
+                    >
+                      <span className="block">{(() => {
+                        const idx = currentWord.example_chinese.indexOf(currentWord.chinese);
+                        if (idx === -1) return currentWord.example_chinese;
+                        return <>{currentWord.example_chinese.slice(0, idx)}<strong>{currentWord.chinese}</strong>{currentWord.example_chinese.slice(idx + currentWord.chinese.length)}</>;
+                      })()}</span>
+                      <span className="block mt-1 text-base text-zinc-700 sm:text-lg">{(() => {
+                        if (!currentWord.example_pinyin) return null;
+                        const text = currentWord.example_pinyin;
+                        const search = currentWord.pinyin;
+                        const textNoSpaces = text.replace(/ /g, '').toLowerCase();
+                        const searchNoSpaces = search.replace(/ /g, '').toLowerCase();
+                        const idx = textNoSpaces.indexOf(searchNoSpaces);
+                        if (idx === -1) return text;
+                        // Map spaceless match indices back to original string positions
+                        let spaceless = 0, startOrig = -1, endOrig = -1;
+                        for (let i = 0; i <= text.length; i++) {
+                          if (spaceless === idx && startOrig === -1) startOrig = i;
+                          if (spaceless === idx + searchNoSpaces.length) { endOrig = i; break; }
+                          if (i < text.length && text[i] !== ' ') spaceless++;
+                        }
+                        if (startOrig === -1 || endOrig === -1) return text;
+                        return <>{text.slice(0, startOrig)}<strong>{text.slice(startOrig, endOrig)}</strong>{text.slice(endOrig)}</>;
+                      })()}</span>
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }
