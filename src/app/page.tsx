@@ -11,6 +11,8 @@ import { syncFromServer } from "@/lib/sync";
 import { submitReview as submitReviewLocal } from "@/lib/review";
 import { getDueWords } from "@/lib/dueWords";
 import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
+import { applySm2 } from "@/lib/sm2";
+import SessionSummary, { type SessionResult } from "@/app/components/SessionSummary";
 
 const ANIMATION_DURATION_MS = 200;
 const KEYBOARD_ANIMATION_DURATION_MS = 120;
@@ -27,6 +29,8 @@ function HomeContent() {
   const [repeatWords, setRepeatWords] = useState<Word[]>([]);
   /** Number of first-attempt fails. Frozen once the first pass ends. */
   const [numFirstPassFails, setNumFirstPassFails] = useState<number>(0);
+  /** Per-word first-attempt results, used to render the end-of-session summary. */
+  const [sessionResults, setSessionResults] = useState<SessionResult[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -48,6 +52,7 @@ function HomeContent() {
     setError(null);
     setRepeatWords([]);
     setNumFirstPassFails(0);
+    setSessionResults([]);
     setCurrentIndex(0);
     setIsRevealed(false);
     setSwipeOffset(0);
@@ -143,6 +148,11 @@ function HomeContent() {
     if (!repeatWords.includes(currentWord)) {
       // Repeat words are not submitted again because we only count the first review for each word.
       submitReview(currentWord.chinese, q);
+      const after = applySm2(
+        { n: currentWord.n, ef: currentWord.ef, i: currentWord.i },
+        q,
+      );
+      setSessionResults(prev => [...prev, { word: currentWord, q, after }]);
     }
     if (q < 3) {
       // Low quality reviews are added to the repeat words list to make sure to review them again in the end of this session.
@@ -231,10 +241,18 @@ function HomeContent() {
   }
 
   if (nextWords.length === 0) {
+    if (sessionResults.length === 0) {
+      return (
+        <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
+          <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
+        </div>
+      );
+    }
     return (
-      <div className="flex flex-1 w-full select-none items-center justify-center overflow-hidden bg-zinc-50 p-4 font-sans dark:bg-black">
-        <div className="text-xl text-zinc-600 dark:text-zinc-400">All finished 🎉</div>
-      </div>
+      <SessionSummary
+        results={sessionResults}
+        onRestart={() => startSession(DEFAULT_SESSION_SIZE)}
+      />
     );
   }
 
