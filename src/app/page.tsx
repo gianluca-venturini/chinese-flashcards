@@ -13,6 +13,7 @@ import { getDueWords } from "@/lib/dueWords";
 import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
 
 const ANIMATION_DURATION_MS = 200;
+const KEYBOARD_ANIMATION_DURATION_MS = 120;
 const MAX_WORDS_STACK = 3;
 const DEFAULT_SESSION_SIZE = 10;
 
@@ -36,6 +37,8 @@ function HomeContent() {
   const [isSwiping, setIsSwiping] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
   const [screenWidth, setScreenWidth] = useState<number>(800); // Default fallback value
+  const [animationDurationMs, setAnimationDurationMs] = useState<number>(ANIMATION_DURATION_MS);
+  const isAnimatingRef = useRef<boolean>(false);
 
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
@@ -131,6 +134,36 @@ function HomeContent() {
     });
   }, []);
 
+  const commitAnswer = useCallback((q: number, durationMs: number) => {
+    if (isAnimatingRef.current) return;
+
+    const currentWord = [...words, ...repeatWords][currentIndex];
+    if (!currentWord) return;
+
+    if (!repeatWords.includes(currentWord)) {
+      // Repeat words are not submitted again because we only count the first review for each word.
+      submitReview(currentWord.chinese, q);
+    }
+    if (q < 3) {
+      // Low quality reviews are added to the repeat words list to make sure to review them again in the end of this session.
+      setRepeatWords(prev => [...prev, currentWord]);
+      if (currentIndex < words.length) {
+        setNumFirstPassFails(prev => prev + 1);
+      }
+    }
+
+    isAnimatingRef.current = true;
+    setAnimationDurationMs(durationMs);
+    setSwipeOffset(q >= 3 ? MAX_SWIPE_OFFSET_X : -MAX_SWIPE_OFFSET_X);
+    setTimeout(() => {
+      setCurrentIndex(prev => prev + 1);
+      setIsRevealed(false);
+      setSwipeOffset(0);
+      setAnimationDurationMs(ANIMATION_DURATION_MS);
+      isAnimatingRef.current = false;
+    }, durationMs);
+  }, [words, repeatWords, currentIndex, submitReview, MAX_SWIPE_OFFSET_X]);
+
   const handleSwipeEnd = useCallback(() => {
     if (!isSwiping) return;
     setIsSwiping(false);
@@ -140,40 +173,37 @@ function HomeContent() {
     }
 
     if (Math.abs(swipeOffset) > SWIPE_THRESHOLD_X) {
-      // Determine q value based on swipe direction
       // Left swipe (negative offset) = q = 0 (don't know)
       // Right swipe (positive offset) = q = 5 (know well)
       const q = swipeOffset > 0 ? 5 : 0;
-
-      // Get current word
-      const currentWord = [...words, ...repeatWords][currentIndex];
-
-      // Call API endpoint to record swipe
-      if (currentWord) {
-        if (!repeatWords.includes(currentWord)) {
-          // Repeat words are not submitted again because we only count the first review for each word.
-          submitReview(currentWord.chinese, q);
-        }
-        if (q < 3) {
-          // Low quality reviews are added to the repeat words list to make sure to review them again in the end of this session.
-          setRepeatWords(prev => [...prev, currentWord]);
-          if (currentIndex < words.length) {
-            setNumFirstPassFails(prev => prev + 1);
-          }
-        }
-      }
-
-      // Animate card out
-      setSwipeOffset(swipeOffset > 0 ? MAX_SWIPE_OFFSET_X : -MAX_SWIPE_OFFSET_X);
-      setTimeout(() => {
-        setCurrentIndex((prev) => prev + 1);
-        setIsRevealed(false);
-        setSwipeOffset(0);
-      }, ANIMATION_DURATION_MS);
+      commitAnswer(q, ANIMATION_DURATION_MS);
     } else {
       setSwipeOffset(0);
     }
-  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, MAX_SWIPE_OFFSET_X, words, repeatWords, currentIndex, submitReview]);
+  }, [isSwiping, swipeOffset, debouncedFlipRevealed, SWIPE_THRESHOLD_X, commitAnswer]);
+
+  useEffect(() => {
+    if (loading || error || nextWords.length === 0) return;
+
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        commitAnswer(5, KEYBOARD_ANIMATION_DURATION_MS);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        commitAnswer(0, KEYBOARD_ANIMATION_DURATION_MS);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        debouncedFlipRevealed();
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [loading, error, nextWords.length, commitAnswer, debouncedFlipRevealed]);
 
   const handleMouseLeave = useCallback(() => {
     if (isSwiping) {
@@ -246,7 +276,7 @@ function HomeContent() {
                   transform: isTopCard
                     ? `translateX(${swipeOffset}px) rotate(${swipeOffset * 0.05}deg)`
                     : `translateY(${translateY}px) scale(${scale})`,
-                  transition: isSwiping && isTopCard ? "none" : `transform ${ANIMATION_DURATION_MS}ms ease-out, opacity ${ANIMATION_DURATION_MS}ms ease-out`,
+                  transition: isSwiping && isTopCard ? "none" : `transform ${animationDurationMs}ms ease-out, opacity ${animationDurationMs}ms ease-out`,
                   opacity: isTopCard && Math.abs(swipeOffset) < SWIPE_THRESHOLD_X
                     ? 1
                     : isTopCard
