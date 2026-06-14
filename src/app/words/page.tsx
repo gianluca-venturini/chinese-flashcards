@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { type Word } from "@/lib/schema";
 import { newWord } from "@/lib/schema";
-import { CategoryId } from "@/lib/categories";
+import { CategoryId, CATEGORY_IDS, CATEGORY_META } from "@/lib/categories";
 import { CATEGORY_COLORS, UNKNOWN_CATEGORY_COLOR } from "@/lib/colors";
 import { getShortDefinition } from "@/lib/formatDefinition";
 import { getAllWords, putWord } from "@/lib/storage";
@@ -472,6 +472,30 @@ export default function WordsPage() {
                 </div>
               </div>
             )}
+            <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {CATEGORY_IDS.map((id) => (
+                  <div key={id} className="inline-flex items-center gap-2">
+                    <span
+                      className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
+                      style={{ backgroundColor: CATEGORY_COLORS[id] }}
+                    />
+                    <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                      {CATEGORY_META[id].label}
+                    </span>
+                  </div>
+                ))}
+                <div className="inline-flex items-center gap-2">
+                  <span
+                    className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
+                    style={{ backgroundColor: UNKNOWN_CATEGORY_COLOR }}
+                  />
+                  <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                    Uncategorized
+                  </span>
+                </div>
+              </div>
+            </div>
           </>
         ) : (
           <>
