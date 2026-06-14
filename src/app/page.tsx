@@ -333,6 +333,15 @@ function HomeContent() {
                         if (startOrig === -1 || endOrig === -1) return text;
                         return <>{text.slice(0, startOrig)}<strong>{text.slice(startOrig, endOrig)}</strong>{text.slice(endOrig)}</>;
                       })()}</span>
+                      {currentWord.example_english && (
+                        <span
+                          className={`block mt-1 text-base italic text-zinc-700 sm:text-lg transition-opacity duration-75 ${
+                            isTopCard && isRevealed ? "opacity-100" : "opacity-0"
+                          }`}
+                        >
+                          {currentWord.example_english}
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>

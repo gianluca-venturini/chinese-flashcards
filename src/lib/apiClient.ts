@@ -30,6 +30,7 @@ const ExamplifyResponseSchema = z.object({
       word: z.string(),
       example_chinese: z.string(),
       example_pinyin: z.string(),
+      example_english: z.string(),
     }),
   ),
 });
@@ -110,7 +111,7 @@ export async function translateWords(
 export async function examplifyWords(
   targets: string[],
   knownWords: string[],
-): Promise<{ word: string; example_chinese: string; example_pinyin: string }[]> {
+): Promise<{ word: string; example_chinese: string; example_pinyin: string; example_english: string }[]> {
   if (targets.length === 0) return [];
   const res = await fetchWithTimeout('/api/words/examplify', {
     method: 'POST',

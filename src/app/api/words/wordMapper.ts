@@ -26,6 +26,7 @@ export function rowToWord(row: Record<string, unknown>): Word {
     n: Number(row.n),
     example_chinese: row.example_chinese ?? null,
     example_pinyin: row.example_pinyin ?? null,
+    example_english: row.example_english ?? null,
     last_reviewed_at: toIso(row.last_reviewed_at),
     updated_at: toIso(row.updated_at),
     deprecated: Boolean(row.deprecated),
