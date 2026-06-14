@@ -288,7 +288,7 @@ function HomeContent() {
                 onTouchStart={isTopCard ? (e) => handleSwipeStart(e.touches[0].clientX) : undefined}
                 onTouchMove={isTopCard ? (e) => handleSwipeMove(e.touches[0].clientX) : undefined}
                 onTouchEnd={isTopCard ? handleSwipeEnd : undefined}
-                className="absolute left-0 top-0 flex w-full h-full cursor-pointer flex-col items-center justify-center rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
+                className="absolute left-0 top-0 grid w-full h-full cursor-pointer rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
                 style={{
                   zIndex: MAX_WORDS_STACK - index,
                   transform: isTopCard
@@ -302,21 +302,26 @@ function HomeContent() {
                       : 1,
                   pointerEvents: isTopCard ? 'auto' : 'none',
                   backgroundColor: CATEGORY_COLORS[currentWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
+                  gridTemplateRows: '1fr auto 1fr',
+                  justifyItems: 'center',
                 }}
               >
-                <div className="relative flex flex-col items-center">
+                <div />
+                <div className="flex flex-col items-center">
                   <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
                     {currentWord.chinese}
                   </h1>
                   <p
-                    className={`absolute top-full mt-4 whitespace-nowrap text-xl text-zinc-900 transition-opacity duration-75 sm:mt-6 sm:text-2xl ${
+                    className={`mt-4 whitespace-nowrap text-xl text-zinc-900 transition-opacity duration-75 sm:mt-6 sm:text-2xl ${
                       isTopCard ? (isRevealed ? "opacity-100" : "opacity-50") : "opacity-0"
                     }`}
                   >
                     {currentWord.pinyin}
                   </p>
+                </div>
+                <div className="flex w-full max-w-[600px] flex-col items-center justify-end gap-6 text-center">
                   <p
-                    className={`absolute top-full mt-16 whitespace-nowrap text-lg text-zinc-900 transition-opacity duration-75 sm:mt-20 sm:text-xl ${
+                    className={`whitespace-nowrap text-lg text-zinc-900 transition-opacity duration-75 sm:text-xl ${
                       isTopCard && isRevealed ? "opacity-100" : "opacity-0"
                     }`}
                   >
@@ -324,7 +329,7 @@ function HomeContent() {
                   </p>
                   {currentWord.example_chinese && (
                     <p
-                      className={`absolute top-full mt-28 w-[80vw] max-w-[600px] text-center text-lg text-zinc-800 transition-opacity duration-75 sm:mt-36 sm:text-xl ${
+                      className={`text-lg text-zinc-800 transition-opacity duration-75 sm:text-xl ${
                         isTopCard ? "opacity-70" : "opacity-0"
                       }`}
                     >
