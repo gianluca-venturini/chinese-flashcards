@@ -67,6 +67,7 @@ describe('resetSr', () => {
       last_reviewed_at: '2024-01-01T00:00:00.000Z',
       example_chinese: '你好吗？',
       example_pinyin: 'nǐ hǎo ma?',
+      example_english: 'How are you?',
       category: 'feelings_thoughts_communication' as const,
     };
     await putWord(reviewed);
@@ -83,6 +84,7 @@ describe('resetSr', () => {
     expect(resetA.english).toBe(WORD_A.english);
     expect(resetA.example_chinese).toBe('你好吗？');
     expect(resetA.example_pinyin).toBe('nǐ hǎo ma?');
+    expect(resetA.example_english).toBe('How are you?');
     expect(resetA.category).toBe('feelings_thoughts_communication');
   });
 

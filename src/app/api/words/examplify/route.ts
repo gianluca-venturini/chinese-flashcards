@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
         word: ex.word,
         example_chinese: ex.example_chinese,
         example_pinyin: await generatePinyin(ex.example_chinese),
+        example_english: ex.example_english,
       })),
     );
 

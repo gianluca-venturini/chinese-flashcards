@@ -124,7 +124,7 @@ describe('translateWords', () => {
 describe('examplifyWords', () => {
   test('POSTs /api/words/examplify with body { words, knownWords }', async () => {
     setupFetch({
-      examples: [{ word: '你好', example_chinese: '你好吗？', example_pinyin: 'nǐ hǎo ma?' }],
+      examples: [{ word: '你好', example_chinese: '你好吗？', example_pinyin: 'nǐ hǎo ma?', example_english: 'How are you?' }],
     });
     const result = await examplifyWords(['你好'], ['谢谢']);
     expect(calls[0].url).toBe('/api/words/examplify');
@@ -133,6 +133,7 @@ describe('examplifyWords', () => {
     expect(body.words).toEqual(['你好']);
     expect(body.knownWords).toEqual(['谢谢']);
     expect(result[0].example_chinese).toBe('你好吗？');
+    expect(result[0].example_english).toBe('How are you?');
   });
 
   test('empty targets is a no-op', async () => {

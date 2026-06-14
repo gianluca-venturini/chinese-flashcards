@@ -58,11 +58,13 @@ Rules:
 - Sentences must be natural and grammatically correct
 - Each sentence must contain the target word
 - Return sentences in the same order as the input words
+- Also return a faithful English translation of the entire example sentence in example_english. It should be natural English that conveys the meaning of the whole sentence, not a word-by-word gloss.
 `;
 
 const ExampleSchema = z.object({
   word: z.string().describe('The original Chinese word'),
   example_chinese: z.string().describe('A short example sentence in Chinese'),
+  example_english: z.string().describe('A faithful, natural English translation of the entire example sentence'),
 });
 
 const BatchExampleSchema = z.object({

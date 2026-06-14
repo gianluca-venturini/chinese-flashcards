@@ -13,6 +13,7 @@ const FULL_ROW = {
   category: 'feelings_thoughts_communication',
   example_chinese: '你好吗？',
   example_pinyin: 'nǐ hǎo ma?',
+  example_english: 'How are you?',
   last_reviewed_at: new Date('2024-01-14T08:00:00.000Z'),
   updated_at: new Date('2024-01-15T10:00:00.000Z'),
   deprecated: false,
@@ -40,6 +41,7 @@ describe('rowToWord', () => {
       category: null,
       example_chinese: null,
       example_pinyin: null,
+      example_english: null,
       last_review_applied_timestamp: new Date('2023-06-10T00:00:00.000Z'),
       // no last_reviewed_at, no updated_at
     };
@@ -56,6 +58,7 @@ describe('rowToWord', () => {
       category: null,
       example_chinese: null,
       example_pinyin: null,
+      example_english: null,
     };
     expect(() => rowToWord(row)).not.toThrow();
   });

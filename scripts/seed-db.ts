@@ -26,6 +26,7 @@ async function seed() {
         category TEXT,
         example_chinese TEXT,
         example_pinyin TEXT,
+        example_english TEXT,
         last_reviewed_at TIMESTAMP WITH TIME ZONE,
         updated_at TIMESTAMP WITH TIME ZONE,
         deprecated BOOLEAN NOT NULL DEFAULT FALSE,
@@ -40,6 +41,7 @@ async function seed() {
     // Add columns for existing installs
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_chinese TEXT`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_pinyin TEXT`;
+    await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS example_english TEXT`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP WITH TIME ZONE`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE`;
     await sql`ALTER TABLE words ADD COLUMN IF NOT EXISTS deprecated BOOLEAN NOT NULL DEFAULT FALSE`;

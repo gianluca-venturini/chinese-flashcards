@@ -12,6 +12,7 @@ const VALID_WORD = {
   category: 'feelings_thoughts_communication',
   example_chinese: '你好吗？',
   example_pinyin: 'nǐ hǎo ma?',
+  example_english: 'How are you?',
   last_reviewed_at: '2024-01-14T08:00:00.000Z',
   updated_at: '2024-01-15T10:30:00.000Z',
   deprecated: false,
@@ -70,6 +71,11 @@ describe('WordSchema', () => {
     expect(() => WordSchema.parse({ ...VALID_WORD, example_pinyin: 'nǐ hǎo ma?' })).not.toThrow();
   });
 
+  test('example_english accepts null and a valid value', () => {
+    expect(() => WordSchema.parse({ ...VALID_WORD, example_english: null })).not.toThrow();
+    expect(() => WordSchema.parse({ ...VALID_WORD, example_english: 'How are you?' })).not.toThrow();
+  });
+
   test('updated_at accepts null and a valid ISO value', () => {
     expect(() => WordSchema.parse({ ...VALID_WORD, updated_at: null })).not.toThrow();
     expect(() => WordSchema.parse({ ...VALID_WORD, updated_at: '2024-01-15T10:30:00.000Z' })).not.toThrow();
@@ -104,6 +110,7 @@ describe('newWord', () => {
     expect(word.category).toBeNull();
     expect(word.example_chinese).toBeNull();
     expect(word.example_pinyin).toBeNull();
+    expect(word.example_english).toBeNull();
     expect(() => WordSchema.parse(word)).not.toThrow();
   });
 
@@ -128,6 +135,7 @@ describe('newWord', () => {
     expect(parsed.category).toBe('feelings_thoughts_communication');
     expect(parsed.example_chinese).toBeNull();
     expect(parsed.example_pinyin).toBeNull();
+    expect(parsed.example_english).toBeNull();
   });
 
   test('newWord sets created_at and updated_at to a valid ISO timestamp', () => {

@@ -187,10 +187,10 @@ export default function WordsPage() {
       );
 
       const updatedWords = await Promise.all(
-        examples.map(async ({ word: chinese, example_chinese, example_pinyin }) => {
+        examples.map(async ({ word: chinese, example_chinese, example_pinyin, example_english }) => {
           const word = words.find((w) => w.chinese === chinese);
           if (!word) return null;
-          return putWord({ ...word, example_chinese, example_pinyin });
+          return putWord({ ...word, example_chinese, example_pinyin, example_english });
         })
       );
 
@@ -696,6 +696,9 @@ export default function WordsPage() {
                               <>
                                 <span>{word.example_chinese}</span>
                                 <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">{word.example_pinyin}</span>
+                                {word.example_english && (
+                                  <span className="ml-2 text-xs italic text-zinc-400 dark:text-zinc-500">{word.example_english}</span>
+                                )}
                               </>
                             ) : '-'}
                           </td>
