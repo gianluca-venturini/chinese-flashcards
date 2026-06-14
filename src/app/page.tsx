@@ -24,6 +24,8 @@ function HomeContent() {
   const [words, setWords] = useState<Word[]>([]);
   /** List of words that should be reviewed again in the end of this session. */
   const [repeatWords, setRepeatWords] = useState<Word[]>([]);
+  /** Number of first-attempt fails. Frozen once the first pass ends. */
+  const [numFirstPassFails, setNumFirstPassFails] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -42,6 +44,7 @@ function HomeContent() {
     setLoading(true);
     setError(null);
     setRepeatWords([]);
+    setNumFirstPassFails(0);
     setCurrentIndex(0);
     setIsRevealed(false);
     setSwipeOffset(0);
@@ -154,6 +157,9 @@ function HomeContent() {
         if (q < 3) {
           // Low quality reviews are added to the repeat words list to make sure to review them again in the end of this session.
           setRepeatWords(prev => [...prev, currentWord]);
+          if (currentIndex < words.length) {
+            setNumFirstPassFails(prev => prev + 1);
+          }
         }
       }
 
@@ -203,12 +209,20 @@ function HomeContent() {
   }
 
   return (
-    <div className="flex flex-1 w-full select-none flex-col items-center justify-center overflow-hidden bg-zinc-50 font-sans dark:bg-black">
+    <div className="relative flex flex-1 w-full select-none flex-col items-center justify-center overflow-hidden bg-zinc-50 font-sans dark:bg-black">
       {syncError && (
         <div className="w-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm text-center py-1 px-4">
           {syncError}
         </div>
       )}
+      <div
+        className="pointer-events-none absolute bottom-3 right-4 select-none font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400"
+        aria-label="Session progress: completed / repeat / session"
+      >
+        {Math.min(currentIndex, words.length) - numFirstPassFails}
+        /{repeatWords.length - Math.max(0, currentIndex - words.length)}
+        /{words.length}
+      </div>
       <div className="flex flex-1 w-full items-center justify-center p-4">
         <div className="relative flex-1 h-full" style={{ maxWidth: '80%', maxHeight: '70%' }}>
           {nextWords.map((currentWord, index) => {
