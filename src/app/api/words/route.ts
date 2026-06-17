@@ -6,6 +6,8 @@ import { rowToWord, PutBodySchema } from './wordMapper';
 
 export { rowToWord, PutBodySchema };
 
+export const maxDuration = 60;
+
 export async function GET() {
   try {
     const user = await stackServerApp.getUser();

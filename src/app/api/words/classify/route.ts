@@ -7,6 +7,8 @@ const RequestSchema = z.object({
   chinese: z.array(z.string()).min(1, 'At least one word is required'),
 });
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const user = await stackServerApp.getUser();

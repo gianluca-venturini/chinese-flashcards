@@ -48,7 +48,7 @@ const PinyinResponseSchema = z.object({
   ),
 });
 
-const API_TIMEOUT_MS = 10_000;
+const API_TIMEOUT_MS = 60_000;
 
 // Wraps fetch with an AbortController timeout so API calls fail fast when the
 // network is unavailable or the server's auth validation hangs (e.g. Stack
