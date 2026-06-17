@@ -10,6 +10,58 @@ import { syncFromServer, ensureWords } from "@/lib/sync";
 import { translateWords, examplifyWords, generatePinyin } from "@/lib/apiClient";
 import { lookupPinyinForWord, lookupPinyinForWords } from "@/lib/pinyinTable";
 
+type SortKey =
+  | 'chinese'
+  | 'pinyin'
+  | 'english'
+  | 'created'
+  | 'interval'
+  | 'ef'
+  | 'reps'
+  | 'example'
+  | 'status';
+type SortDir = 'asc' | 'desc';
+
+type Comparable = string | number | null;
+
+function sortValue(word: Word, key: SortKey): Comparable {
+  switch (key) {
+    case 'chinese': return word.chinese;
+    case 'pinyin': return word.pinyin;
+    case 'english': return word.english;
+    case 'created': return Date.parse(word.created_at);
+    case 'interval': return word.i;
+    case 'ef': return word.ef;
+    case 'reps': return word.n;
+    case 'example': return word.example_chinese;
+    case 'status': return Number(word.deprecated);
+  }
+}
+
+function compareWords(a: Word, b: Word, key: SortKey, dir: SortDir): number {
+  const va = sortValue(a, key);
+  const vb = sortValue(b, key);
+  const aNull = va === null || va === undefined;
+  const bNull = vb === null || vb === undefined;
+  if (aNull && bNull) return 0;
+  if (aNull) return 1;
+  if (bNull) return -1;
+  let cmp: number;
+  if (typeof va === 'string' && typeof vb === 'string') {
+    cmp = va.localeCompare(vb);
+  } else {
+    cmp = (va as number) - (vb as number);
+  }
+  return dir === 'asc' ? cmp : -cmp;
+}
+
+function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) {
+    return <span className="text-zinc-300 dark:text-zinc-600">↕</span>;
+  }
+  return <span>{dir === 'asc' ? '▲' : '▼'}</span>;
+}
+
 export default function WordsPage() {
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,11 +87,27 @@ export default function WordsPage() {
   const [bulkPreview, setBulkPreview] = useState<{ chinese: string; pinyin: string; isDuplicate: boolean }[]>([]);
   const [isBulkLoading, setIsBulkLoading] = useState<boolean>(false);
   const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
+  const [sortKey, setSortKey] = useState<SortKey>('created');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const visibleWords = useMemo(
     () => (showDeprecated ? words : words.filter((w) => !w.deprecated)),
     [words, showDeprecated],
   );
+
+  const sortedWords = useMemo(
+    () => [...visibleWords].sort((a, b) => compareWords(a, b, sortKey, sortDir)),
+    [visibleWords, sortKey, sortDir],
+  );
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   async function refreshWords() {
     const allWords = await getAllWords();
@@ -563,20 +631,50 @@ export default function WordsPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-10">
                       <input
                         type="checkbox"
-                        checked={selectedWords.size === visibleWords.length && visibleWords.length > 0}
+                        checked={selectedWords.size === sortedWords.length && sortedWords.length > 0}
                         onChange={toggleSelectAll}
                         className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Chinese</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Pinyin</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">English</th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                      onClick={() => handleSort('chinese')}
+                    >
+                      <span className="flex items-center gap-1">
+                        Chinese
+                        <SortIndicator active={sortKey === 'chinese'} dir={sortDir} />
+                      </span>
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                      onClick={() => handleSort('pinyin')}
+                    >
+                      <span className="flex items-center gap-1">
+                        Pinyin
+                        <SortIndicator active={sortKey === 'pinyin'} dir={sortDir} />
+                      </span>
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                      onClick={() => handleSort('english')}
+                    >
+                      <span className="flex items-center gap-1">
+                        English
+                        <SortIndicator active={sortKey === 'english'} dir={sortDir} />
+                      </span>
+                    </th>
                     {showAdvancedColumns && (
                       <>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                        <th
+                          className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                          onClick={() => handleSort('created')}
+                        >
                           <span className="flex items-center gap-1">
                         Created
-                            <span className="relative cursor-help text-zinc-400 group">
+                            <span
+                              className="relative cursor-help text-zinc-400 group"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <path d="M12 16v-4" />
@@ -586,6 +684,7 @@ export default function WordsPage() {
                             Date when the word was added
                               </span>
                             </span>
+                            <SortIndicator active={sortKey === 'created'} dir={sortDir} />
                           </span>
                         </th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
@@ -603,10 +702,16 @@ export default function WordsPage() {
                             </span>
                           </span>
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                        <th
+                          className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                          onClick={() => handleSort('interval')}
+                        >
                           <span className="flex items-center gap-1">
                         Interval
-                            <span className="relative cursor-help text-zinc-400 group">
+                            <span
+                              className="relative cursor-help text-zinc-400 group"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <path d="M12 16v-4" />
@@ -616,12 +721,19 @@ export default function WordsPage() {
                             Days until next review (SM-2 algorithm)
                               </span>
                             </span>
+                            <SortIndicator active={sortKey === 'interval'} dir={sortDir} />
                           </span>
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                        <th
+                          className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                          onClick={() => handleSort('ef')}
+                        >
                           <span className="flex items-center gap-1">
                         EF
-                            <span className="relative cursor-help text-zinc-400 group">
+                            <span
+                              className="relative cursor-help text-zinc-400 group"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <path d="M12 16v-4" />
@@ -631,12 +743,19 @@ export default function WordsPage() {
                             Easiness Factor (1.3-2.5+): higher = easier, shown less often
                               </span>
                             </span>
+                            <SortIndicator active={sortKey === 'ef'} dir={sortDir} />
                           </span>
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">
+                        <th
+                          className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                          onClick={() => handleSort('reps')}
+                        >
                           <span className="flex items-center gap-1">
                         Reps
-                            <span className="relative cursor-help text-zinc-400 group">
+                            <span
+                              className="relative cursor-help text-zinc-400 group"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <path d="M12 16v-4" />
@@ -646,16 +765,33 @@ export default function WordsPage() {
                             Consecutive successful reviews (resets to 0 on failure)
                               </span>
                             </span>
+                            <SortIndicator active={sortKey === 'reps'} dir={sortDir} />
                           </span>
                         </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600">Example</th>
+                        <th
+                          className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 cursor-pointer select-none"
+                          onClick={() => handleSort('example')}
+                        >
+                          <span className="flex items-center gap-1">
+                            Example
+                            <SortIndicator active={sortKey === 'example'} dir={sortDir} />
+                          </span>
+                        </th>
                       </>
                     )}
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-32">Status</th>
+                    <th
+                      className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-32 cursor-pointer select-none"
+                      onClick={() => handleSort('status')}
+                    >
+                      <span className="flex items-center justify-end gap-1">
+                        Status
+                        <SortIndicator active={sortKey === 'status'} dir={sortDir} />
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleWords.map((word, index) => (
+                  {sortedWords.map((word, index) => (
                     <tr
                       key={`${word.chinese}-${index}`}
                       className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
