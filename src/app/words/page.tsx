@@ -190,16 +190,16 @@ export default function WordsPage() {
   };
 
   const handleRowSelect = (index: number, shift: boolean) => {
-    const word = visibleWords[index];
+    const word = sortedWords[index];
     if (!word) return;
 
-    if (shift && selectionAnchor !== null && visibleWords[selectionAnchor]) {
+    if (shift && selectionAnchor !== null && sortedWords[selectionAnchor]) {
       const start = Math.min(selectionAnchor, index);
       const end = Math.max(selectionAnchor, index);
       setSelectedWords((prev) => {
         const next = new Set(prev);
         for (let i = start; i <= end; i++) {
-          next.add(visibleWords[i].chinese);
+          next.add(sortedWords[i].chinese);
         }
         return next;
       });
@@ -220,10 +220,10 @@ export default function WordsPage() {
 
   const toggleSelectAll = () => {
     setSelectionAnchor(null);
-    if (selectedWords.size === visibleWords.length) {
+    if (selectedWords.size === sortedWords.length) {
       setSelectedWords(new Set());
     } else {
-      setSelectedWords(new Set(visibleWords.map((w) => w.chinese)));
+      setSelectedWords(new Set(sortedWords.map((w) => w.chinese)));
     }
   };
 
