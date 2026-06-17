@@ -20,6 +20,7 @@ export default function WordsPage() {
   const [showAdvancedColumns, setShowAdvancedColumns] = useState<boolean>(false);
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
   const [selectedWords, setSelectedWords] = useState<Set<string>>(new Set());
+  const [selectionAnchor, setSelectionAnchor] = useState<number | null>(null);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
@@ -120,19 +121,37 @@ export default function WordsPage() {
     }
   };
 
-  const toggleWordSelection = (chinese: string) => {
+  const handleRowSelect = (index: number, shift: boolean) => {
+    const word = visibleWords[index];
+    if (!word) return;
+
+    if (shift && selectionAnchor !== null && visibleWords[selectionAnchor]) {
+      const start = Math.min(selectionAnchor, index);
+      const end = Math.max(selectionAnchor, index);
+      setSelectedWords((prev) => {
+        const next = new Set(prev);
+        for (let i = start; i <= end; i++) {
+          next.add(visibleWords[i].chinese);
+        }
+        return next;
+      });
+      return;
+    }
+
     setSelectedWords((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(chinese)) {
-        newSet.delete(chinese);
+      const next = new Set(prev);
+      if (next.has(word.chinese)) {
+        next.delete(word.chinese);
       } else {
-        newSet.add(chinese);
+        next.add(word.chinese);
       }
-      return newSet;
+      return next;
     });
+    setSelectionAnchor(index);
   };
 
   const toggleSelectAll = () => {
+    setSelectionAnchor(null);
     if (selectedWords.size === visibleWords.length) {
       setSelectedWords(new Set());
     } else {
@@ -659,13 +678,17 @@ export default function WordsPage() {
                     <tr
                       key={`${word.chinese}-${index}`}
                       className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
-                      onClick={() => toggleWordSelection(word.chinese)}
+                      onClick={(e) => handleRowSelect(index, e.shiftKey)}
                     >
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedWords.has(word.chinese)}
-                          onChange={() => toggleWordSelection(word.chinese)}
+                          onChange={() => {}}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowSelect(index, e.shiftKey);
+                          }}
                           className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 cursor-pointer"
                         />
                       </td>
