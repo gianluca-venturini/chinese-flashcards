@@ -76,6 +76,7 @@ export default function WordsPage() {
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
+  const [pinyinValue, setPinyinValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newChinese, setNewChinese] = useState<string>("");
@@ -139,6 +140,7 @@ export default function WordsPage() {
   const handleWordClick = (word: Word) => {
     setEditingWord(word);
     setEnglishValue(word.english ?? "");
+    setPinyinValue(word.pinyin ?? "");
   };
 
   const handleToggleDeprecated = async (word: Word) => {
@@ -165,6 +167,7 @@ export default function WordsPage() {
   const handleDialogClose = () => {
     setEditingWord(null);
     setEnglishValue("");
+    setPinyinValue("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,7 +176,7 @@ export default function WordsPage() {
 
     setIsSubmitting(true);
     try {
-      const updated = await putWord({ ...editingWord, english: englishValue || null });
+      const updated = await putWord({ ...editingWord, pinyin: pinyinValue, english: englishValue || null });
       try {
         await ensureWords([updated]);
       } catch {
@@ -1079,11 +1082,17 @@ export default function WordsPage() {
               <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
                 {editingWord.chinese}
               </p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                {editingWord.pinyin}
-              </p>
             </div>
             <form onSubmit={handleSubmit}>
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Pinyin
+              </label>
+              <input
+                type="text"
+                value={pinyinValue}
+                onChange={(e) => setPinyinValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              />
               <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 English Translation
               </label>
