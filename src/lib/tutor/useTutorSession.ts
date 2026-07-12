@@ -70,6 +70,29 @@ export function useTutorSession(): TutorSession {
     setEntries((prev) => [...prev, entry]);
   }, []);
 
+  // Fill in pinyin/english for a fallback (transcript-only) tutor line, since
+  // the audio transcript gives us Hanzi alone.
+  const backfillAnnotation = useCallback(async (id: string, hanzi: string) => {
+    try {
+      const res = await fetch('/api/tutor/annotate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hanzi }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) return;
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === id && entry.kind === 'utterance'
+            ? { ...entry, pinyin: data.pinyin, english: data.english }
+            : entry
+        )
+      );
+    } catch {
+      // Non-fatal: the line still shows its Hanzi.
+    }
+  }, []);
+
   const handleMessage = useCallback(
     (raw: string) => {
       let parsed: Record<string, unknown>;
@@ -115,13 +138,10 @@ export function useTutorSession(): TutorSession {
           // Fallback: if the tutor spoke but never called display_utterance,
           // show the audio transcript so the panel is never empty.
           if (!sawUtteranceRef.current && tutorTranscriptRef.current.trim()) {
-            appendEntry({
-              kind: 'utterance',
-              id: crypto.randomUUID(),
-              hanzi: tutorTranscriptRef.current,
-              pinyin: '',
-              english: '',
-            });
+            const id = crypto.randomUUID();
+            const hanzi = tutorTranscriptRef.current;
+            appendEntry({ kind: 'utterance', id, hanzi, pinyin: '', english: '' });
+            void backfillAnnotation(id, hanzi);
           }
           setState('listening');
           break;
@@ -129,7 +149,7 @@ export function useTutorSession(): TutorSession {
           break;
       }
     },
-    [appendEntry]
+    [appendEntry, backfillAnnotation]
   );
 
   // Analyse both live streams so the UI can react to who is talking and how
