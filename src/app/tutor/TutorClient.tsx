@@ -8,6 +8,7 @@ import {
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
 import { TutorDock } from './TutorDock';
+import { TutorEntry } from './TutorEntry';
 
 export default function TutorClient() {
   const session = useTutorSession();
@@ -23,8 +24,11 @@ export default function TutorClient() {
               description="Start a session and talk with your Mandarin tutor. Speak naturally — 李老师 hears your tones."
             />
           ) : (
-            // Entry rendering is added in tasks 6.4 / 6.5.
-            entries.map((entry) => <div key={entry.id} />)
+            <div className="flex flex-col gap-4">
+              {entries.map((entry) => (
+                <TutorEntry key={entry.id} entry={entry} />
+              ))}
+            </div>
           )}
         </ConversationContent>
         <ConversationScrollButton />
