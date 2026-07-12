@@ -16,7 +16,7 @@
 
 - [x] 3.1 Create `POST /api/tutor/session/route.ts` following existing route conventions (Stack auth → 401 if unauthenticated, `maxDuration = 60`, JSON response)
 - [x] 3.2 Mint a short-lived realtime session token server-side using the existing OpenAI key; return `{ token, model, voice }` and never expose the long-lived key
-- [ ] 3.3 Add a test covering the unauthenticated 401 path and the shape of a successful response
+- [x] 3.3 Add a test covering the unauthenticated 401 path and the shape of a successful response
 
 ## 4. Provider abstraction
 
