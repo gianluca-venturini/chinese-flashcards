@@ -11,21 +11,17 @@ The system SHALL provide a `/tutor` page that hosts the voice tutoring experienc
 
 ### Requirement: Live utterance display
 
-The UI SHALL render each `display_utterance` as three lines: Hanzi large (`text-2xl`), pinyin medium and muted, and English small and italic (secondary).
+The UI SHALL render each tutor line as three lines: Hanzi large (`text-2xl`), pinyin medium and muted, and English small and italic (secondary). Pinyin and English may arrive shortly after the Hanzi (via backfill); the UI SHALL show them as soon as they are available.
 
 #### Scenario: Utterance renders three lines
 
-- **WHEN** a `display_utterance` tool call is received
+- **WHEN** a tutor line is displayed and its pinyin/English are available
 - **THEN** the UI shows the Hanzi prominently, the tone-marked pinyin below it in a muted medium size, and the English in small italic secondary text
 
-### Requirement: Correction card
+#### Scenario: Hanzi shown before backfill completes
 
-The UI SHALL render `show_correction` as a visually distinct card using an amber/warm highlight (`bg-amber-50 border-l-4 border-amber-400`; dark mode `bg-amber-950/30 border-amber-500`), showing the target word/phrase prominently (Hanzi and tone-marked pinyin) alongside the `description` explaining the mistake and fix, with a label such as "🔄 Try again:" / "发音纠正". Corrections cover both pronunciation and grammar.
-
-#### Scenario: Correction is visually distinct
-
-- **WHEN** a `show_correction` tool call is received
-- **THEN** the UI renders an amber-highlighted card with the target Hanzi and pinyin prominent and the `description` shown as the corrective explanation, styled distinctly from normal utterances in both light and dark mode
+- **WHEN** a tutor line has been rendered but its pinyin/English backfill has not yet returned
+- **THEN** the UI shows the Hanzi immediately and fills in pinyin/English when they arrive
 
 ### Requirement: Correction sensitivity control
 
@@ -43,17 +39,12 @@ The UI SHALL let the learner choose the tutor's correction sensitivity level —
 
 ### Requirement: Conversation panel
 
-The UI SHALL maintain a scrollable conversation history containing all tutor utterances and learner turns. Tutor entries SHALL show a 🎓 李老师 badge with Hanzi/pinyin/English; learner entries SHALL show a 🎤 You badge with the transcript when available. Correction entries SHALL retain their distinct styling in the scrollback.
+The UI SHALL maintain a scrollable conversation history containing all tutor and learner turns. Tutor entries SHALL show a 🎓 李老师 badge with Hanzi/pinyin/English; learner entries SHALL show a 🎤 You badge with the transcript when available.
 
 #### Scenario: History accumulates both speakers
 
 - **WHEN** the tutor and learner exchange turns
 - **THEN** each turn is appended to the conversation panel with the correct speaker badge and content
-
-#### Scenario: Correction styling persists in scrollback
-
-- **WHEN** a past turn was a correction
-- **THEN** it retains its distinct correction styling when viewed in the scrolled-back history
 
 ### Requirement: Auto-scroll behavior
 

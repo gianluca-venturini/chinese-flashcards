@@ -63,17 +63,22 @@ The system SHALL treat the realtime provider as swappable behind an abstraction,
 
 ### Requirement: Teacher persona and pedagogy
 
-The session SHALL be configured with a system prompt establishing the persona 李老师 (Lǐ Lǎoshī), a patient Mandarin tutor who speaks only Chinese, asks the learner questions, starts with simple topics (greetings, introductions) and increases complexity based on the learner's demonstrated level, and praises correct answers. When the tutor corrects the learner it SHALL take the time to talk through the correction verbally, explaining the mistake and the fix in mixed Chinese and English so a beginner can follow, rather than only flagging it.
+The session SHALL be configured with a system prompt establishing the persona 李老师 (Lǐ Lǎoshī), a patient Mandarin tutor who speaks only Chinese for ordinary conversation, responds to the learner (rather than repeating them) and moves the conversation forward, asks the learner questions, starts with simple topics (greetings, introductions) and increases complexity based on the learner's demonstrated level, and praises correct answers. Corrections are delivered verbally within the conversation: when the tutor corrects the learner it SHALL take the time to explain the mistake and the fix in mixed Chinese and English so a beginner can follow, model the correct form, and wait for the learner to try again.
 
 #### Scenario: Tutor speaks only Chinese for ordinary conversation
 
 - **WHEN** the tutor produces an ordinary conversational response
-- **THEN** the response is in Mandarin Chinese
+- **THEN** the response is spoken in Mandarin Chinese
+
+#### Scenario: Tutor responds instead of echoing
+
+- **WHEN** the learner says something (e.g. gives their name)
+- **THEN** the tutor responds to it and advances the conversation, rather than repeating the learner's words back
 
 #### Scenario: Tutor verbally explains a correction
 
 - **WHEN** the tutor corrects the learner
-- **THEN** the tutor takes the time to explain the mistake and the fix in mixed Chinese and English, models the correct form, and waits for the learner to try again before continuing
+- **THEN** the tutor explains the mistake and the fix aloud in mixed Chinese and English, models the correct form, and waits for the learner to try again before continuing
 
 ### Requirement: Correction sensitivity level
 
@@ -98,28 +103,19 @@ The tutor SHALL correct both pronunciation and grammar, and how aggressively it 
 - **WHEN** the learner changes the sensitivity level
 - **THEN** subsequent tutor turns follow the new level's correction behavior
 
-### Requirement: Display tool contracts
+### Requirement: Teacher text from transcript
 
-The model SHALL be given two tools and instructed to call them alongside its audio so the UI can render text without parsing transcripts. Each tool SHALL carry only the fields the UI needs to render, keeping the schemas minimal. The two tools are distinct in purpose: `display_utterance` renders ordinary teacher speech, and `show_correction` renders a correction — a correction is never rendered as a plain utterance. Both tools MAY be called in the same turn when the tutor corrects the learner and then continues with ordinary conversation.
+The system SHALL render the tutor's on-screen text from the session's audio transcript rather than from model tool calls, so that producing text never competes with producing speech. Because the transcript provides Chinese characters only, the client SHALL backfill pinyin (with tone marks) and an English translation for each tutor line and display all three. The session SHALL NOT declare display/correction tools.
 
-The `display_utterance` tool SHALL accept `{ hanzi: string, pinyin: string, english: string }`, where `pinyin` uses tone marks (e.g. `nǐ hǎo`), and SHALL be called for each ordinary sentence the teacher speaks.
+#### Scenario: Teacher line rendered from transcript
 
-The `show_correction` tool SHALL accept `{ targetHanzi: string, targetPinyin: string, description: string }` and SHALL be used for both pronunciation and grammar corrections. `description` is a free-form explanation of the mistake and the fix, matching what the tutor says aloud and mixing English and Chinese as needed (e.g. "second tone, not fourth tone" or "用『了』because it already happened"). It SHALL be called whenever the tutor corrects the learner, and it is the only tool used to render a correction.
+- **WHEN** the tutor finishes speaking a turn
+- **THEN** the tutor's spoken text is rendered on screen from the audio transcript, and its pinyin and English are backfilled and shown
 
-#### Scenario: Ordinary sentence emits an utterance
+#### Scenario: Backfill failure degrades gracefully
 
-- **WHEN** the tutor speaks an ordinary sentence that is not a correction
-- **THEN** the model calls `display_utterance` with matching Hanzi, tone-marked pinyin, and English, and does not call `show_correction`
-
-#### Scenario: Correction emits a correction card
-
-- **WHEN** the tutor corrects the learner's pronunciation or grammar
-- **THEN** the model calls `show_correction` with the target word/phrase and a `description` that matches the tutor's spoken explanation, and the correction is rendered by that tool rather than as a `display_utterance`
-
-#### Scenario: Correcting and continuing in one turn
-
-- **WHEN** the tutor both corrects the learner and continues with a new ordinary sentence in the same turn
-- **THEN** the model calls `show_correction` for the correction and `display_utterance` for the continuing sentence
+- **WHEN** the pinyin/English backfill for a tutor line fails
+- **THEN** the line still displays its Chinese text and the session continues
 
 ### Requirement: Session lifecycle and state
 

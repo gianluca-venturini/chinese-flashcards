@@ -52,6 +52,18 @@
 - [x] 8.4 Add an explicit "respond, don't echo" rule to the prompt so 李老师 answers the learner and advances the conversation instead of repeating their words (found during 7.1: the tutor was parroting the learner)
 - [x] 8.5 Instruct the model to always speak aloud so a display_utterance tool call never replaces the spoken audio (found during 7.1: audio was sometimes missing while the dialog still rendered)
 
+## 9. Simplify: transcript-driven, no tool calls
+
+<!-- Decision (during 7.1): the per-sentence display_utterance tool call competed
+     with audio output, so the tutor sometimes went silent. Remove BOTH display
+     tools. Teacher text now comes from the audio transcript (backfilled with
+     pinyin/english); corrections are delivered verbally by the tutor in class. -->
+
+- [x] 9.1 Update specs and design to the transcript-driven, no-tool, verbal-correction design
+- [ ] 9.2 Remove the display tools: delete `tools.ts`, drop tools/`tool_choice` from the session config, simplify the provider events, drop the correction entry type, and remove tool instructions from the prompt
+- [ ] 9.3 Simplify `useTutorSession` to build each teacher utterance from the audio transcript + annotation backfill (remove the correction and no-tool-call fallback bookkeeping)
+- [ ] 9.4 UI cleanup: remove the correction card and simplify entry rendering to teacher/learner turns only
+
 ## 7. Verification
 
 - [x] 7.1 Manually exercise a session end-to-end: mic permission, speaking, hearing a Mandarin reply, utterance/correction rendering, barge-in, mute, stop/reconnect, and switching sensitivity levels

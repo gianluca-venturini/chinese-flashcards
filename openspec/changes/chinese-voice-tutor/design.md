@@ -12,7 +12,7 @@ The original request described AI SDK 7 and an `experimental_useRealtime` hook. 
 
 - Establish a browser ↔ model speech-to-speech session with no STT step in the audio path.
 - Keep provider API keys server-side; the browser uses only ephemeral credentials.
-- Render all text from `display_utterance` / `show_correction` tool calls, not transcript parsing.
+- Render teacher text from the audio transcript (backfilled with pinyin/English), so producing text never competes with producing speech. No display/correction tool calls; corrections are delivered verbally by the tutor.
 - Support a learner-selectable correction sensitivity level (LOW/MEDIUM/HIGH) covering pronunciation and grammar.
 - Provider abstraction with OpenAI Realtime primary and a documented path to Gemini Live.
 - Clear session lifecycle/state surfaced to the UI, built on shadcn/ui (Base UI, neutral) components.
@@ -46,16 +46,13 @@ Add `POST /api/tutor/session` following existing route conventions: require `sta
 
 On data-channel open, the client sends a `session.update` carrying: modalities `["text","audio"]`, `turn_detection: { type: "server_vad" }` (barge-in enabled), the system prompt (persona + pedagogy), and the two tool definitions. The **correction sensitivity level** is injected into the system prompt text; changing it re-sends `session.update` with regenerated instructions so it takes effect on subsequent turns without reconnecting.
 
-The system prompt encodes: 李老师 persona, Chinese-only for ordinary talk, mixed-language verbal explanation for corrections, HSK2 baseline, the LOW/MEDIUM/HIGH thresholds for pronunciation+grammar, and the rule that corrections go through `show_correction` (never `display_utterance`).
+The system prompt encodes: 李老师 persona, Chinese-only for ordinary talk, always speak aloud, respond (don't echo the learner), mixed-language verbal explanation for corrections, HSK2 baseline, and the LOW/MEDIUM/HIGH thresholds for pronunciation+grammar. No tools are declared.
 
-### Tool-call-driven display
+### Transcript-driven display (no tool calls)
 
-The two tools are declared in the session. When the model emits a function call over the data channel, `useTutorSession` parses it and appends a typed entry to the conversation state:
+The session declares **no** display/correction tools. Teacher text is taken from the session's audio transcript: on each tutor turn the client reads the audio-transcript event, appends a teacher utterance (Hanzi only), and **backfills** pinyin + English via `/api/tutor/annotate`, updating the entry in place. Learner turns are appended from input-audio transcription events. UI state is a single ordered list of entries; the live display shows the latest, the panel shows history.
 
-- `display_utterance({ hanzi, pinyin, english })` → utterance entry.
-- `show_correction({ targetHanzi, targetPinyin, description })` → correction entry (amber card).
-
-Both may occur in one turn. Learner turns are appended from input-audio transcription events when available. UI state is a single ordered list of entries; the live display shows the latest, the panel shows history.
+This replaces an earlier tool-call-driven approach (`display_utterance`/`show_correction`). Forcing a `display_utterance` tool call per sentence competed with audio output, so the tutor sometimes produced the tool call but no speech. Taking text from the transcript removes that competition — audio is always produced and text always renders. Corrections are no longer a structured card; the tutor explains them **verbally** in class, governed by the sensitivity level.
 
 ### UI component layer: shadcn/ui with Base UI (neutral)
 
@@ -71,7 +68,7 @@ The `/tutor` surface is built with shadcn/ui configured against **Base UI** prim
 On top of shadcn, the tutor UI uses **AI SDK Elements** (elements.ai-sdk.dev) — shadcn-registry components that install into `src/components/ai-elements/*`:
 
 - **`Conversation`** (`ConversationContent`, `ConversationScrollButton`, `ConversationEmptyState`) — the scrollable thread. Its built-in "auto-scroll to bottom with a scroll button when scrolled up" behavior directly satisfies the auto-scroll requirement, so we do not hand-roll that logic. `ConversationEmptyState` covers the idle "press start" state.
-- **`Message` / `MessageContent`** — tutor and learner bubbles. Hanzi/pinyin/English render inside a tutor `Message`; the amber correction card is a custom element rendered inline in the thread (not a `Message`).
+- **`Message` / `MessageContent`** — tutor and learner bubbles. Hanzi/pinyin/English render inside a tutor `Message`; learner turns in a `Message` on the other side.
 - **`Persona`** — a Rive/WebGL2 animated AI "blob" driven by `state` (`idle | listening | thinking | speaking | asleep`), used as the tutor's avatar/state indicator in the pinned dock. Our session states map to it: connecting → `thinking`, listening → `listening`, thinking → `thinking`, speaking → `speaking`, idle → `idle`/`asleep`; the `error` state is not a Persona state, so the dock renders a distinct red error/reconnect treatment instead.
 - **Persona reacts to live audio, not just coarse state.** Two Web Audio `AnalyserNode`s — one on the mic capture stream, one on the remote (tutor) audio track — produce running amplitude. The dominant live source flips `Persona` between `listening` (learner audio present) and `speaking` (tutor audio present), and the amplitude feeds the visual's intensity where the API allows, so the blob visibly reacts to who is talking and how loudly, settling to `idle` when both are quiet. `useTutorSession` exposes these audio-activity signals so the dock stays a thin consumer.
 
@@ -80,10 +77,10 @@ On top of shadcn, the tutor UI uses **AI SDK Elements** (elements.ai-sdk.dev) �
 
 ### Layout direction: chat-forward
 
-The chosen layout (validated via prototype) is **chat-forward**, built on the Elements `Conversation`: the conversation history is the primary, full-height column laid out as a message thread — tutor turns as left-aligned `Message` bubbles (🎓 李老师) with Hanzi/pinyin/English, learner turns as right-aligned `Message` bubbles (🎤 You), and corrections as full-width inline amber cards in the flow. A **pinned dock** sits at the bottom holding the `Persona` state visual, the current live utterance (Hanzi + pinyin), the sensitivity segmented control, and the Stop/Mute controls. Newest content sits at the bottom; `Conversation`'s built-in auto-scroll follows it and `ConversationScrollButton` handles the scrolled-up case.
+The chosen layout (validated via prototype) is **chat-forward**, built on the Elements `Conversation`: the conversation history is the primary, full-height column laid out as a message thread — tutor turns as left-aligned `Message` bubbles (🎓 李老师) with Hanzi/pinyin/English, learner turns as right-aligned `Message` bubbles (🎤 You). A **pinned dock** sits at the bottom holding the `Persona` state visual, the current live utterance (Hanzi + pinyin), the sensitivity segmented control, and the Stop/Mute controls. Newest content sits at the bottom; `Conversation`'s built-in auto-scroll follows it and `ConversationScrollButton` handles the scrolled-up case.
 
 - The state indicator is the `Persona` visual in the dock (idle/listening/thinking/speaking), with a distinct red error/reconnect treatment for the `error` state (not a Persona state).
-- Palette from the prototype: cool-neutral ground, **jade** accent for active/identity, **amber** strictly for corrections, **red** strictly for errors.
+- Palette from the prototype: cool-neutral ground, **jade** accent for active/identity, **red** strictly for errors. (The amber correction card is dropped in the simplified design — corrections are verbal.)
 - **Alternatives considered:** *Immersion* (single centered utterance, history hidden) — calm but hides context; *Split workspace* (stage + persistent transcript) — great for study but needs width. Chat-forward was chosen for familiarity and for keeping corrections visible inline. The other two remain easy pivots since the UI spec is layout-agnostic.
 
 ### Provider abstraction
@@ -93,7 +90,8 @@ A `RealtimeProvider` interface encapsulates: how to mint credentials (server), h
 ### File layout
 
 - `src/app/tutor/page.tsx` — page (auth-gated).
-- `src/app/tutor/*` — client components: session controls, state indicator, live display, correction card, conversation panel, sensitivity control.
+- `src/app/tutor/*` — client components: dock (Persona, controls, live display, sensitivity), conversation thread, entry renderer.
+- `src/lib/tutor/annotate.ts` + `src/app/api/tutor/annotate/route.ts` — sentence pinyin/English backfill for teacher lines.
 - `src/components/ui/*` — shadcn/ui (Base UI) primitives.
 - `src/components/ai-elements/*` — AI SDK Elements (`Conversation`, `Message`, `Persona`, …) installed via the registry.
 - `src/app/api/tutor/session/route.ts` — ephemeral credential route.
@@ -104,7 +102,7 @@ A `RealtimeProvider` interface encapsulates: how to mint credentials (server), h
 
 ## Risks / Trade-offs
 
-- **Model may not reliably call the display tools** → Prompt strongly requires a `display_utterance` per sentence; if a turn produces audio with no tool call, fall back to the audio transcript so the panel is never empty. Because that transcript has Hanzi only, the client then backfills pinyin/english for the fallback line via a sentence-annotation endpoint (`/api/tutor/annotate`) and updates the entry in place, so every teacher line still shows all three. (Observed in practice during verification; see tasks group 8.)
+- **Backfill latency/failure** → Teacher text comes from the transcript (Hanzi) and pinyin/English are backfilled via `/api/tutor/annotate`. The Hanzi shows immediately; pinyin/English fill in when the call returns, and if it fails the line still shows its Hanzi. (This transcript-driven approach replaced the earlier tool-call display, which sometimes produced text without audio — see tasks group 9.)
 - **WebRTC/browser audio complexity (autoplay, echo, permissions)** → Play remote audio via a user-gesture-initiated `<audio>` element (Start button is the gesture); request mic with `getUserMedia`; surface permission-denied as an actionable error state.
 - **Provider/AI-SDK mismatch (requested v7 hook absent)** → Documented above; direct WebRTC integration behind `useTutorSession` insulates callers, so a future AI SDK realtime hook is an internal swap.
 - **shadcn + Base UI + Tailwind v4 setup friction** → Confirm the CLI supports the Base UI target for this shadcn/Tailwind v4 version at implementation; keep adoption scoped to the tutor surface so any friction is contained.
