@@ -18,6 +18,7 @@ const STATE_LABEL: Record<string, string> = {
 export function TutorDock({ session }: { session: TutorSession }) {
   const {
     state,
+    entries,
     error,
     muted,
     activity,
@@ -32,6 +33,11 @@ export function TutorDock({ session }: { session: TutorSession }) {
 
   const active = state !== 'idle' && state !== 'error';
 
+  const lastUtterance = [...entries]
+    .reverse()
+    .find((entry) => entry.kind === 'utterance');
+  const showUtterance = state === 'speaking' && lastUtterance;
+
   return (
     <div className="bg-muted/30 border-t">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-4 p-4">
@@ -45,6 +51,16 @@ export function TutorDock({ session }: { session: TutorSession }) {
         <div className="min-w-0 flex-1">
           {state === 'error' ? (
             <p className="text-destructive text-sm">{error ?? 'Something went wrong.'}</p>
+          ) : showUtterance ? (
+            <div className="min-w-0">
+              <p className="text-2xl leading-tight font-medium">{lastUtterance.hanzi}</p>
+              {lastUtterance.pinyin && (
+                <p className="text-muted-foreground text-base">{lastUtterance.pinyin}</p>
+              )}
+              {lastUtterance.english && (
+                <p className="text-muted-foreground/80 text-sm italic">{lastUtterance.english}</p>
+              )}
+            </div>
           ) : (
             <p className="text-muted-foreground text-sm">{STATE_LABEL[state]}</p>
           )}
