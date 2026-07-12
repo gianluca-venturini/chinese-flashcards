@@ -16,7 +16,10 @@
     "test:integration": "bun --env-file=.env.local test ./src/**/*.integration.ts",
     "db:seed": "bun run scripts/seed-db.ts",
     "env:setup": "bunx vercel link",
-    "env:pull": "bunx vercel env pull .env.local"
+    "env:pull": "bunx vercel env pull .env.local",
+    "ui:init": "shadcn@latest init -b base -t next -p nova -y",
+    "ui:add": "shadcn@latest add card toggle-group toggle badge -y",
+    "ui:add:elements": "shadcn@latest add @ai-elements/conversation @ai-elements/message @ai-elements/persona -y"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.67",
