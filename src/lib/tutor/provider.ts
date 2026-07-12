@@ -61,7 +61,8 @@ export const openAiRealtimeProvider: RealtimeProvider = {
         output_modalities: ['audio'],
         audio: {
           input: {
-            turn_detection: { type: 'server_vad' },
+            // Push-to-talk: the client controls turns, so disable auto VAD.
+            turn_detection: null,
             transcription: { model: 'gpt-4o-mini-transcribe' },
           },
         },

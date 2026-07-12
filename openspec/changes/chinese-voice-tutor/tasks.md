@@ -71,8 +71,8 @@
      release, and pressing while it speaks interrupts it. -->
 
 - [x] 10.1 Update spec/design: replace server-VAD turn-taking with push-to-talk (hold SPACE to talk, commit on release, press-to-interrupt)
-- [ ] 10.2 Disable server VAD (`turn_detection: null`) and add push-to-talk to the hook: gate the mic to the hold, commit the buffer + create a response on release, cancel the tutor's response when the learner starts talking, and trigger the tutor's opening greeting on connect
-- [ ] 10.3 Replace the mute control with a hold-to-talk button in the dock, bound to the SPACE key, with a clear held/idle indicator
+- [x] 10.2 Disable server VAD (`turn_detection: null`) and add push-to-talk to the hook: gate the mic to the hold, commit the buffer + create a response on release, cancel the tutor's response when the learner starts talking, and trigger the tutor's opening greeting on connect
+- [x] 10.3 Replace the mute control with a hold-to-talk button in the dock, bound to the SPACE key, with a clear held/idle indicator
 
 ## 7. Verification
 

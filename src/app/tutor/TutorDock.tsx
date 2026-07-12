@@ -1,16 +1,16 @@
 'use client';
 
-import { Mic, MicOff, Play, RotateCcw, Square } from 'lucide-react';
+import { useEffect } from 'react';
+import { Mic, Play, RotateCcw, Square } from 'lucide-react';
 import type { TutorSession } from '@/lib/tutor/useTutorSession';
 import { Button } from '@/components/ui/button';
-import { Toggle } from '@/components/ui/toggle';
 import { TutorPersona } from './TutorPersona';
 import { SensitivityControl } from './SensitivityControl';
 
 const STATE_LABEL: Record<string, string> = {
   idle: 'Ready when you are',
   connecting: 'Connecting…',
-  listening: 'Listening…',
+  listening: 'Your turn — listening',
   thinking: 'Thinking…',
   speaking: '李老师 is speaking',
 };
@@ -20,23 +20,48 @@ export function TutorDock({ session }: { session: TutorSession }) {
     state,
     entries,
     error,
-    muted,
+    talking,
     activity,
     getAmplitude,
     level,
     start,
     stop,
     reconnect,
-    toggleMute,
+    startTalking,
+    stopTalking,
     setLevel,
   } = session;
 
   const active = state !== 'idle' && state !== 'error';
+  const canTalk = active && state !== 'connecting';
 
   const lastUtterance = [...entries]
     .reverse()
     .find((entry) => entry.kind === 'utterance');
   const showUtterance = state === 'speaking' && lastUtterance;
+
+  // Hold SPACE to talk while the session is active.
+  useEffect(() => {
+    if (!canTalk) return;
+    const down = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        startTalking();
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        stopTalking();
+      }
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, [canTalk, startTalking, stopTalking]);
 
   return (
     <div className="bg-muted/30 border-t">
@@ -82,16 +107,23 @@ export function TutorDock({ session }: { session: TutorSession }) {
 
         {active && (
           <>
-            <Toggle
-              pressed={muted}
-              onPressedChange={() => toggleMute()}
-              aria-label={muted ? 'Unmute microphone' : 'Mute microphone'}
-              variant="outline"
+            <Button
+              variant={talking ? 'default' : 'outline'}
+              disabled={!canTalk}
+              aria-pressed={talking}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                startTalking();
+              }}
+              onPointerUp={() => stopTalking()}
+              onPointerCancel={() => stopTalking()}
             >
-              {muted ? <MicOff className="size-4" /> : <Mic className="size-4" />}
-            </Toggle>
-            <Button variant="destructive" onClick={() => stop()}>
-              <Square className="size-4" /> Stop
+              <Mic className="size-4" />
+              {talking ? 'Listening… release to send' : 'Hold to talk (Space)'}
+            </Button>
+            <Button variant="destructive" size="icon" aria-label="Stop session" onClick={() => stop()}>
+              <Square className="size-4" />
             </Button>
           </>
         )}

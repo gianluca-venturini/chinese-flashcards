@@ -15,7 +15,8 @@ export interface TutorSession {
   entries: ConversationEntry[];
   error: string | null;
   level: SensitivityLevel;
-  muted: boolean;
+  /** Whether the learner is currently holding the talk control. */
+  talking: boolean;
   /** Which live audio source is currently dominant (drives the Persona state). */
   activity: AudioActivity;
   /** Current dominant audio amplitude (0..1); read per-frame for reactive visuals. */
@@ -23,7 +24,10 @@ export interface TutorSession {
   start: () => Promise<void>;
   stop: () => void;
   reconnect: () => Promise<void>;
-  toggleMute: () => void;
+  /** Begin capturing the learner's turn (hold-to-talk press). */
+  startTalking: () => void;
+  /** End and send the learner's turn (hold-to-talk release). */
+  stopTalking: () => void;
   setLevel: (level: SensitivityLevel) => void;
 }
 
@@ -42,7 +46,7 @@ export function useTutorSession(): TutorSession {
   const [entries, setEntries] = useState<ConversationEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [level, setLevelState] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
-  const [muted, setMuted] = useState(false);
+  const [talking, setTalking] = useState(false);
   const [activity, setActivity] = useState<AudioActivity>('none');
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -217,7 +221,7 @@ export function useTutorSession(): TutorSession {
   const start = useCallback(async () => {
     setError(null);
     setEntries([]);
-    setMuted(false);
+    setTalking(false);
     setState('connecting');
     try {
       // 1. Get a short-lived credential from our server.
@@ -248,18 +252,23 @@ export function useTutorSession(): TutorSession {
       };
 
       // Data channel carrying session events. On open, configure the session
-      // (persona, VAD) and move to listening.
+      // (persona, push-to-talk) and have the tutor greet first.
       const dc = pc.createDataChannel(provider.eventChannel);
       dcRef.current = dc;
       dc.onopen = () => {
         sendEvent(provider.buildSessionUpdate(levelRef.current));
-        setState('listening');
+        sendEvent({ type: 'response.create' });
+        setState('thinking');
       };
       dc.onmessage = (event) => handleMessage(event.data);
 
-      // 3. Capture the microphone (started by the user gesture that called start()).
+      // 3. Capture the microphone (started by the user gesture that called
+      //    start()). Push-to-talk: the track stays muted until the learner holds.
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = mic;
+      mic.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
       mic.getTracks().forEach((track) => pc.addTrack(track, mic));
 
       // 4. Exchange SDP with the Realtime API using the ephemeral token.
@@ -289,15 +298,31 @@ export function useTutorSession(): TutorSession {
 
   const reconnect = useCallback(() => start(), [start]);
 
-  const toggleMute = useCallback(() => {
-    setMuted((prev) => {
-      const next = !prev;
-      micStreamRef.current?.getAudioTracks().forEach((track) => {
-        track.enabled = !next;
-      });
-      return next;
+  const setMicEnabled = useCallback((enabled: boolean) => {
+    micStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = enabled;
     });
   }, []);
+
+  // Push-to-talk: hold to capture the learner's turn, release to send it.
+  const startTalking = useCallback(() => {
+    if (dcRef.current?.readyState !== 'open') return;
+    // Interrupt the tutor if it's mid-response, then start a clean turn.
+    sendEvent({ type: 'response.cancel' });
+    sendEvent({ type: 'input_audio_buffer.clear' });
+    setMicEnabled(true);
+    setTalking(true);
+    setState('listening');
+  }, [sendEvent, setMicEnabled]);
+
+  const stopTalking = useCallback(() => {
+    if (!talking) return;
+    setMicEnabled(false);
+    setTalking(false);
+    sendEvent({ type: 'input_audio_buffer.commit' });
+    sendEvent({ type: 'response.create' });
+    setState('thinking');
+  }, [talking, sendEvent, setMicEnabled]);
 
   // Changing the level re-sends session.update with a regenerated prompt so it
   // takes effect on subsequent turns without reconnecting (no-op when idle).
@@ -320,13 +345,14 @@ export function useTutorSession(): TutorSession {
     entries,
     error,
     level,
-    muted,
+    talking,
     activity,
     getAmplitude,
     start,
     stop,
     reconnect,
-    toggleMute,
+    startTalking,
+    stopTalking,
     setLevel,
   };
 }
