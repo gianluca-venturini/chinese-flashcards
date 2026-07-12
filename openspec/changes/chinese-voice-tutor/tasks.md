@@ -50,6 +50,7 @@
 - [x] 8.2 Add a sentence-annotation endpoint (`POST /api/tutor/annotate`) and lib that returns `{ pinyin, english }` for a full Chinese sentence, auth-gated per route conventions
 - [x] 8.3 In `useTutorSession`, when a fallback (transcript-only) utterance is created, backfill its pinyin/english from the annotate endpoint and update the entry in place
 - [x] 8.4 Add an explicit "respond, don't echo" rule to the prompt so 李老师 answers the learner and advances the conversation instead of repeating their words (found during 7.1: the tutor was parroting the learner)
+- [x] 8.5 Instruct the model to always speak aloud so a display_utterance tool call never replaces the spoken audio (found during 7.1: audio was sometimes missing while the dialog still rendered)
 
 ## 7. Verification
 
