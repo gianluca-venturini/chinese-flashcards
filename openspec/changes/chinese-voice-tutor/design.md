@@ -104,7 +104,7 @@ A `RealtimeProvider` interface encapsulates: how to mint credentials (server), h
 
 ## Risks / Trade-offs
 
-- **Model may not reliably call the display tools** → Prompt strongly requires a `display_utterance` per sentence; if a turn produces audio with no tool call, fall back to showing the input/output transcript text so the panel is never empty.
+- **Model may not reliably call the display tools** → Prompt strongly requires a `display_utterance` per sentence; if a turn produces audio with no tool call, fall back to the audio transcript so the panel is never empty. Because that transcript has Hanzi only, the client then backfills pinyin/english for the fallback line via a sentence-annotation endpoint (`/api/tutor/annotate`) and updates the entry in place, so every teacher line still shows all three. (Observed in practice during verification; see tasks group 8.)
 - **WebRTC/browser audio complexity (autoplay, echo, permissions)** → Play remote audio via a user-gesture-initiated `<audio>` element (Start button is the gesture); request mic with `getUserMedia`; surface permission-denied as an actionable error state.
 - **Provider/AI-SDK mismatch (requested v7 hook absent)** → Documented above; direct WebRTC integration behind `useTutorSession` insulates callers, so a future AI SDK realtime hook is an internal swap.
 - **shadcn + Base UI + Tailwind v4 setup friction** → Confirm the CLI supports the Base UI target for this shadcn/Tailwind v4 version at implementation; keep adoption scoped to the tutor surface so any friction is contained.

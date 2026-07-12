@@ -40,6 +40,16 @@
 - [x] 6.4 Render the thread with Elements `Conversation`/`ConversationContent`: tutor turns as left `Message` bubbles (🎓 李老师) with Hanzi/pinyin/English, learner turns as right `Message` bubbles (🎤 You); rely on `Conversation` auto-scroll + `ConversationScrollButton` for the scrolled-up case
 - [x] 6.5 Build the inline correction card (amber styling `bg-amber-50 border-l-4 border-amber-400`, dark `bg-amber-950/30 border-amber-500`) rendered in the thread flow, showing target Hanzi/pinyin, the `description`, and the retry label; covers pronunciation and grammar, and retains its styling in scrollback
 
+## 8. Tool-call fallback backfill
+
+<!-- Found during 7.1: the realtime model sometimes speaks without calling
+     display_utterance, so those teacher lines showed Hanzi only (from the audio
+     transcript) with no pinyin/english. -->
+
+- [x] 8.1 Strengthen the `display_utterance` instructions in the system prompt so the model calls it for every spoken sentence
+- [ ] 8.2 Add a sentence-annotation endpoint (`POST /api/tutor/annotate`) and lib that returns `{ pinyin, english }` for a full Chinese sentence, auth-gated per route conventions
+- [ ] 8.3 In `useTutorSession`, when a fallback (transcript-only) utterance is created, backfill its pinyin/english from the annotate endpoint and update the entry in place
+
 ## 7. Verification
 
 - [ ] 7.1 Manually exercise a session end-to-end: mic permission, speaking, hearing a Mandarin reply, utterance/correction rendering, barge-in, mute, stop/reconnect, and switching sensitivity levels
