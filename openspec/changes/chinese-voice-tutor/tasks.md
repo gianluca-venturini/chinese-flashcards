@@ -53,6 +53,6 @@
 
 ## 7. Verification
 
-- [ ] 7.1 Manually exercise a session end-to-end: mic permission, speaking, hearing a Mandarin reply, utterance/correction rendering, barge-in, mute, stop/reconnect, and switching sensitivity levels
+- [x] 7.1 Manually exercise a session end-to-end: mic permission, speaking, hearing a Mandarin reply, utterance/correction rendering, barge-in, mute, stop/reconnect, and switching sensitivity levels
 - [ ] 7.2 Verify light/dark styling of the correction card and state indicators
 - [ ] 7.3 Run `bun run lint` and `bun test`, and confirm `bun run build` succeeds
