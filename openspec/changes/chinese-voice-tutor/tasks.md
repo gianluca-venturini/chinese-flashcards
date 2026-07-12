@@ -51,6 +51,7 @@
 - [x] 8.3 In `useTutorSession`, when a fallback (transcript-only) utterance is created, backfill its pinyin/english from the annotate endpoint and update the entry in place
 - [x] 8.4 Add an explicit "respond, don't echo" rule to the prompt so 李老师 answers the learner and advances the conversation instead of repeating their words (found during 7.1: the tutor was parroting the learner)
 - [x] 8.5 Instruct the model to always speak aloud so a display_utterance tool call never replaces the spoken audio (found during 7.1: audio was sometimes missing while the dialog still rendered)
+- [x] 8.6 Make the annotation cover the ENTIRE transcript (all sentences/clauses), not just an embedded example phrase (found during 7.1: pinyin/english covered only part of a multi-sentence tutor turn)
 
 ## 9. Simplify: transcript-driven, no tool calls
 
