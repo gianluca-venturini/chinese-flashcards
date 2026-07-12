@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getRealtimeProvider } from './provider';
 import {
   DEFAULT_SENSITIVITY,
+  type AudioActivity,
   type ConversationEntry,
   type SensitivityLevel,
   type SessionState,
@@ -15,6 +16,10 @@ export interface TutorSession {
   error: string | null;
   level: SensitivityLevel;
   muted: boolean;
+  /** Which live audio source is currently dominant (drives the Persona state). */
+  activity: AudioActivity;
+  /** Current dominant audio amplitude (0..1); read per-frame for reactive visuals. */
+  getAmplitude: () => number;
   start: () => Promise<void>;
   stop: () => void;
   reconnect: () => Promise<void>;
@@ -37,6 +42,12 @@ export function useTutorSession(): TutorSession {
   const [error, setError] = useState<string | null>(null);
   const [level] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
   const [muted, setMuted] = useState(false);
+  const [activity, setActivity] = useState<AudioActivity>('none');
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const activityRef = useRef<AudioActivity>('none');
+  const amplitudeRef = useRef(0);
 
   // Per-response bookkeeping for the "no display tool call" fallback.
   const sawUtteranceRef = useRef(false);
@@ -120,7 +131,66 @@ export function useTutorSession(): TutorSession {
     [appendEntry]
   );
 
+  // Analyse both live streams so the UI can react to who is talking and how
+  // loudly. Runs once per session (guarded on the AudioContext).
+  const startAnalysers = useCallback((remoteStream: MediaStream) => {
+    const mic = micStreamRef.current;
+    if (!mic || audioCtxRef.current || typeof window.AudioContext === 'undefined') return;
+
+    const ctx = new window.AudioContext();
+    audioCtxRef.current = ctx;
+
+    const makeAnalyser = (stream: MediaStream) => {
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      return analyser;
+    };
+    const learnerAnalyser = makeAnalyser(mic);
+    const tutorAnalyser = makeAnalyser(remoteStream);
+    const buffer = new Uint8Array(learnerAnalyser.frequencyBinCount);
+
+    const rms = (analyser: AnalyserNode) => {
+      analyser.getByteTimeDomainData(buffer);
+      let sum = 0;
+      for (let i = 0; i < buffer.length; i++) {
+        const centered = (buffer[i] - 128) / 128;
+        sum += centered * centered;
+      }
+      return Math.sqrt(sum / buffer.length);
+    };
+
+    const THRESHOLD = 0.04;
+    const tick = () => {
+      const learner = rms(learnerAnalyser);
+      const tutor = rms(tutorAnalyser);
+      let next: AudioActivity = 'none';
+      let amplitude = 0;
+      if (tutor > THRESHOLD && tutor >= learner) {
+        next = 'tutor';
+        amplitude = tutor;
+      } else if (learner > THRESHOLD) {
+        next = 'learner';
+        amplitude = learner;
+      }
+      amplitudeRef.current = amplitude;
+      if (activityRef.current !== next) {
+        activityRef.current = next;
+        setActivity(next);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+  }, []);
+
   const cleanup = useCallback(() => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    activityRef.current = 'none';
+    amplitudeRef.current = 0;
+    setActivity('none');
     micStreamRef.current?.getTracks().forEach((t) => t.stop());
     micStreamRef.current = null;
     dcRef.current?.close();
@@ -162,6 +232,7 @@ export function useTutorSession(): TutorSession {
       audioElRef.current = audioEl;
       pc.ontrack = (event) => {
         audioEl.srcObject = event.streams[0];
+        startAnalysers(event.streams[0]);
       };
 
       pc.onconnectionstatechange = () => {
@@ -209,7 +280,7 @@ export function useTutorSession(): TutorSession {
       setError(errorMessage(err));
       setState('error');
     }
-  }, [cleanup, sendEvent, handleMessage]);
+  }, [cleanup, sendEvent, handleMessage, startAnalysers]);
 
   const reconnect = useCallback(() => start(), [start]);
 
@@ -223,8 +294,22 @@ export function useTutorSession(): TutorSession {
     });
   }, []);
 
+  const getAmplitude = useCallback(() => amplitudeRef.current, []);
+
   // Release audio/connection on unmount.
   useEffect(() => cleanup, [cleanup]);
 
-  return { state, entries, error, level, muted, start, stop, reconnect, toggleMute };
+  return {
+    state,
+    entries,
+    error,
+    level,
+    muted,
+    activity,
+    getAmplitude,
+    start,
+    stop,
+    reconnect,
+    toggleMute,
+  };
 }
