@@ -58,6 +58,12 @@ async function UserInfoBar() {
       <div className="flex items-center gap-4">
         <CustomSessionMenuItem />
         <Link
+          href="/tutor"
+          className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+        >
+          Tutor
+        </Link>
+        <Link
           href="/words"
           className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
         >
