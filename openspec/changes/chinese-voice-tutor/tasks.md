@@ -20,7 +20,7 @@
 
 ## 4. Provider abstraction
 
-- [ ] 4.1 Create `src/lib/tutor/provider.ts`: define the `RealtimeProvider` interface (mint-credentials contract, build session config, interpret events/tool-calls/state)
+- [x] 4.1 Create `src/lib/tutor/provider.ts`: define the `RealtimeProvider` interface (mint-credentials contract, build session config, interpret events/tool-calls/state)
 - [ ] 4.2 Implement the OpenAI Realtime provider behind the interface; leave a documented seam for a future Gemini Live impl (no full Gemini adapter in this change)
 
 ## 5. Realtime session hook
