@@ -7,11 +7,11 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation';
-import { Button } from '@/components/ui/button';
+import { TutorDock } from './TutorDock';
 
 export default function TutorClient() {
   const session = useTutorSession();
-  const { state, entries, start } = session;
+  const { entries } = session;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -30,15 +30,7 @@ export default function TutorClient() {
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="border-t p-4">
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-center">
-          {state === 'idle' ? (
-            <Button onClick={() => start()}>● Start session</Button>
-          ) : (
-            <span className="text-muted-foreground text-sm capitalize">{state}</span>
-          )}
-        </div>
-      </div>
+      <TutorDock session={session} />
     </div>
   );
 }
