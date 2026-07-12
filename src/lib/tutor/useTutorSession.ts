@@ -14,8 +14,11 @@ export interface TutorSession {
   entries: ConversationEntry[];
   error: string | null;
   level: SensitivityLevel;
+  muted: boolean;
   start: () => Promise<void>;
   stop: () => void;
+  reconnect: () => Promise<void>;
+  toggleMute: () => void;
 }
 
 const provider = getRealtimeProvider();
@@ -33,6 +36,7 @@ export function useTutorSession(): TutorSession {
   const [entries, setEntries] = useState<ConversationEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [level] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
+  const [muted, setMuted] = useState(false);
 
   // Per-response bookkeeping for the "no display tool call" fallback.
   const sawUtteranceRef = useRef(false);
@@ -81,9 +85,19 @@ export function useTutorSession(): TutorSession {
         case 'tutorTranscript':
           tutorTranscriptRef.current = event.text;
           break;
+        case 'learnerSpeechStarted':
+          setState('listening');
+          break;
+        case 'learnerSpeechStopped':
+          setState('thinking');
+          break;
         case 'responseStarted':
           sawUtteranceRef.current = false;
           tutorTranscriptRef.current = '';
+          setState('thinking');
+          break;
+        case 'audioDelta':
+          setState('speaking');
           break;
         case 'responseDone':
           // Fallback: if the tutor spoke but never called display_utterance,
@@ -97,6 +111,7 @@ export function useTutorSession(): TutorSession {
               english: '',
             });
           }
+          setState('listening');
           break;
         default:
           break;
@@ -127,6 +142,7 @@ export function useTutorSession(): TutorSession {
   const start = useCallback(async () => {
     setError(null);
     setEntries([]);
+    setMuted(false);
     setState('connecting');
     try {
       // 1. Get a short-lived credential from our server.
@@ -195,8 +211,20 @@ export function useTutorSession(): TutorSession {
     }
   }, [cleanup, sendEvent, handleMessage]);
 
+  const reconnect = useCallback(() => start(), [start]);
+
+  const toggleMute = useCallback(() => {
+    setMuted((prev) => {
+      const next = !prev;
+      micStreamRef.current?.getAudioTracks().forEach((track) => {
+        track.enabled = !next;
+      });
+      return next;
+    });
+  }, []);
+
   // Release audio/connection on unmount.
   useEffect(() => cleanup, [cleanup]);
 
-  return { state, entries, error, level, start, stop };
+  return { state, entries, error, level, muted, start, stop, reconnect, toggleMute };
 }
