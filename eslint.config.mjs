@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated component libraries (shadcn/ui + AI SDK Elements) — vendored via
+    // the shadcn CLI, not hand-maintained, so exempt from our formatting rules.
+    "src/components/ui/**",
+    "src/components/ai-elements/**",
   ]),
   {
     rules: {

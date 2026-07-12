@@ -9,8 +9,8 @@ const RequestSchema = z.object({
   hanzi: z.string().min(1, 'hanzi is required'),
 });
 
-// Returns pinyin + English for a Chinese sentence, used to backfill tutor lines
-// where the realtime model spoke without calling display_utterance.
+// Returns pinyin + English for a Chinese sentence, used to backfill the tutor's
+// lines, whose on-screen text comes from the audio transcript (Hanzi only).
 export async function POST(request: NextRequest) {
   const user = await stackServerApp.getUser();
   if (!user) {

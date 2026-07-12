@@ -14,7 +14,8 @@ export type SessionState =
   | 'speaking'
   | 'error';
 
-/** A sentence spoken by the tutor, rendered from a `display_utterance` tool call. */
+/** A sentence spoken by the tutor. Hanzi comes from the audio transcript; pinyin
+ *  and english are backfilled shortly after (empty until then). */
 export interface TeacherUtterance {
   kind: 'utterance';
   id: string;
@@ -31,18 +32,8 @@ export interface LearnerTurn {
   text: string;
 }
 
-/** A pronunciation or grammar correction, rendered from a `show_correction` tool call. */
-export interface CorrectionEntry {
-  kind: 'correction';
-  id: string;
-  targetHanzi: string;
-  targetPinyin: string;
-  /** Free-form explanation of the mistake and fix, mixing Chinese and English. */
-  description: string;
-}
-
 /** One entry in the ordered conversation history. */
-export type ConversationEntry = TeacherUtterance | LearnerTurn | CorrectionEntry;
+export type ConversationEntry = TeacherUtterance | LearnerTurn;
 
 /** Which live audio source is currently dominant, used to drive the Persona visual. */
 export type AudioActivity = 'none' | 'learner' | 'tutor';

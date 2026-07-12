@@ -9,8 +9,8 @@ const SentenceAnnotationSchema = z.object({
 
 export type SentenceAnnotation = z.infer<typeof SentenceAnnotationSchema>;
 
-// Produce pinyin + English for a full Chinese sentence. Used to backfill tutor
-// lines when the realtime model spoke without calling display_utterance.
+// Produce pinyin + English for a full Chinese sentence. Used to backfill the
+// tutor's lines, whose text comes from the audio transcript (Hanzi only).
 export async function annotateSentence(hanzi: string): Promise<SentenceAnnotation> {
   const { object } = await generateObject({
     model: openai('gpt-4.1'),

@@ -50,10 +50,6 @@ export function useTutorSession(): TutorSession {
   const activityRef = useRef<AudioActivity>('none');
   const amplitudeRef = useRef(0);
 
-  // Per-response bookkeeping for the "no display tool call" fallback.
-  const sawUtteranceRef = useRef(false);
-  const tutorTranscriptRef = useRef('');
-
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
@@ -70,8 +66,8 @@ export function useTutorSession(): TutorSession {
     setEntries((prev) => [...prev, entry]);
   }, []);
 
-  // Fill in pinyin/english for a fallback (transcript-only) tutor line, since
-  // the audio transcript gives us Hanzi alone.
+  // Teacher text comes from the audio transcript (Hanzi only), so fill in pinyin
+  // and english for each tutor line and update the entry in place.
   const backfillAnnotation = useCallback(async (id: string, hanzi: string) => {
     try {
       const res = await fetch('/api/tutor/annotate', {
@@ -105,20 +101,18 @@ export function useTutorSession(): TutorSession {
       if (!event) return;
 
       switch (event.kind) {
-        case 'utterance':
-          sawUtteranceRef.current = true;
-          appendEntry({ kind: 'utterance', id: crypto.randomUUID(), ...event.args });
-          break;
-        case 'correction':
-          appendEntry({ kind: 'correction', id: crypto.randomUUID(), ...event.args });
-          break;
         case 'learnerTranscript':
           if (event.text.trim()) {
             appendEntry({ kind: 'learner', id: crypto.randomUUID(), text: event.text });
           }
           break;
         case 'tutorTranscript':
-          tutorTranscriptRef.current = event.text;
+          // The tutor's spoken text — render it and backfill pinyin/english.
+          if (event.text.trim()) {
+            const id = crypto.randomUUID();
+            appendEntry({ kind: 'utterance', id, hanzi: event.text, pinyin: '', english: '' });
+            void backfillAnnotation(id, event.text);
+          }
           break;
         case 'learnerSpeechStarted':
           setState('listening');
@@ -127,22 +121,12 @@ export function useTutorSession(): TutorSession {
           setState('thinking');
           break;
         case 'responseStarted':
-          sawUtteranceRef.current = false;
-          tutorTranscriptRef.current = '';
           setState('thinking');
           break;
         case 'audioDelta':
           setState('speaking');
           break;
         case 'responseDone':
-          // Fallback: if the tutor spoke but never called display_utterance,
-          // show the audio transcript so the panel is never empty.
-          if (!sawUtteranceRef.current && tutorTranscriptRef.current.trim()) {
-            const id = crypto.randomUUID();
-            const hanzi = tutorTranscriptRef.current;
-            appendEntry({ kind: 'utterance', id, hanzi, pinyin: '', english: '' });
-            void backfillAnnotation(id, hanzi);
-          }
           setState('listening');
           break;
         default:
@@ -264,7 +248,7 @@ export function useTutorSession(): TutorSession {
       };
 
       // Data channel carrying session events. On open, configure the session
-      // (persona, tools, VAD) and move to listening.
+      // (persona, VAD) and move to listening.
       const dc = pc.createDataChannel(provider.eventChannel);
       dcRef.current = dc;
       dc.onopen = () => {

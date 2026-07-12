@@ -60,9 +60,9 @@
      pinyin/english); corrections are delivered verbally by the tutor in class. -->
 
 - [x] 9.1 Update specs and design to the transcript-driven, no-tool, verbal-correction design
-- [ ] 9.2 Remove the display tools: delete `tools.ts`, drop tools/`tool_choice` from the session config, simplify the provider events, drop the correction entry type, and remove tool instructions from the prompt
-- [ ] 9.3 Simplify `useTutorSession` to build each teacher utterance from the audio transcript + annotation backfill (remove the correction and no-tool-call fallback bookkeeping)
-- [ ] 9.4 UI cleanup: remove the correction card and simplify entry rendering to teacher/learner turns only
+- [x] 9.2 Remove the display tools: delete `tools.ts`, drop tools/`tool_choice` from the session config, simplify the provider events, drop the correction entry type, and remove tool instructions from the prompt
+- [x] 9.3 Simplify `useTutorSession` to build each teacher utterance from the audio transcript + annotation backfill (remove the correction and no-tool-call fallback bookkeeping)
+- [x] 9.4 UI cleanup: remove the correction card and simplify entry rendering to teacher/learner turns only
 
 ## 7. Verification
 

@@ -2,7 +2,6 @@
 
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import type { ConversationEntry } from '@/lib/tutor/types';
-import { CorrectionCard } from './CorrectionCard';
 
 export function TutorEntry({ entry }: { entry: ConversationEntry }) {
   if (entry.kind === 'utterance') {
@@ -24,16 +23,12 @@ export function TutorEntry({ entry }: { entry: ConversationEntry }) {
     );
   }
 
-  if (entry.kind === 'learner') {
-    return (
-      <Message from="user">
-        <MessageContent>
-          <span className="text-muted-foreground mb-1 block text-xs font-medium">🎤 You</span>
-          <span className="block">{entry.text}</span>
-        </MessageContent>
-      </Message>
-    );
-  }
-
-  return <CorrectionCard entry={entry} />;
+  return (
+    <Message from="user">
+      <MessageContent>
+        <span className="text-muted-foreground mb-1 block text-xs font-medium">🎤 You</span>
+        <span className="block">{entry.text}</span>
+      </MessageContent>
+    </Message>
+  );
 }
