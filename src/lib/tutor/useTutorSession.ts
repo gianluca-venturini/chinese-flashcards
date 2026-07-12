@@ -30,9 +30,13 @@ function errorMessage(err: unknown): string {
 
 export function useTutorSession(): TutorSession {
   const [state, setState] = useState<SessionState>('idle');
-  const [entries] = useState<ConversationEntry[]>([]);
+  const [entries, setEntries] = useState<ConversationEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [level] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
+
+  // Per-response bookkeeping for the "no display tool call" fallback.
+  const sawUtteranceRef = useRef(false);
+  const tutorTranscriptRef = useRef('');
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -45,6 +49,61 @@ export function useTutorSession(): TutorSession {
     const dc = dcRef.current;
     if (dc?.readyState === 'open') dc.send(JSON.stringify(event));
   }, []);
+
+  const appendEntry = useCallback((entry: ConversationEntry) => {
+    setEntries((prev) => [...prev, entry]);
+  }, []);
+
+  const handleMessage = useCallback(
+    (raw: string) => {
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      const event = provider.interpretEvent(parsed);
+      if (!event) return;
+
+      switch (event.kind) {
+        case 'utterance':
+          sawUtteranceRef.current = true;
+          appendEntry({ kind: 'utterance', id: crypto.randomUUID(), ...event.args });
+          break;
+        case 'correction':
+          appendEntry({ kind: 'correction', id: crypto.randomUUID(), ...event.args });
+          break;
+        case 'learnerTranscript':
+          if (event.text.trim()) {
+            appendEntry({ kind: 'learner', id: crypto.randomUUID(), text: event.text });
+          }
+          break;
+        case 'tutorTranscript':
+          tutorTranscriptRef.current = event.text;
+          break;
+        case 'responseStarted':
+          sawUtteranceRef.current = false;
+          tutorTranscriptRef.current = '';
+          break;
+        case 'responseDone':
+          // Fallback: if the tutor spoke but never called display_utterance,
+          // show the audio transcript so the panel is never empty.
+          if (!sawUtteranceRef.current && tutorTranscriptRef.current.trim()) {
+            appendEntry({
+              kind: 'utterance',
+              id: crypto.randomUUID(),
+              hanzi: tutorTranscriptRef.current,
+              pinyin: '',
+              english: '',
+            });
+          }
+          break;
+        default:
+          break;
+      }
+    },
+    [appendEntry]
+  );
 
   const cleanup = useCallback(() => {
     micStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -67,6 +126,7 @@ export function useTutorSession(): TutorSession {
 
   const start = useCallback(async () => {
     setError(null);
+    setEntries([]);
     setState('connecting');
     try {
       // 1. Get a short-lived credential from our server.
@@ -103,6 +163,7 @@ export function useTutorSession(): TutorSession {
         sendEvent(provider.buildSessionUpdate(levelRef.current));
         setState('listening');
       };
+      dc.onmessage = (event) => handleMessage(event.data);
 
       // 3. Capture the microphone (started by the user gesture that called start()).
       const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -132,7 +193,7 @@ export function useTutorSession(): TutorSession {
       setError(errorMessage(err));
       setState('error');
     }
-  }, [cleanup]);
+  }, [cleanup, sendEvent, handleMessage]);
 
   // Release audio/connection on unmount.
   useEffect(() => cleanup, [cleanup]);
