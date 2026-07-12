@@ -1,0 +1,123 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getRealtimeProvider } from './provider';
+import {
+  DEFAULT_SENSITIVITY,
+  type ConversationEntry,
+  type SensitivityLevel,
+  type SessionState,
+} from './types';
+
+export interface TutorSession {
+  state: SessionState;
+  entries: ConversationEntry[];
+  error: string | null;
+  level: SensitivityLevel;
+  start: () => Promise<void>;
+  stop: () => void;
+}
+
+const provider = getRealtimeProvider();
+
+function errorMessage(err: unknown): string {
+  if (err instanceof DOMException && err.name === 'NotAllowedError') {
+    return 'Microphone access was blocked. Allow the microphone and try again.';
+  }
+  if (err instanceof Error) return err.message;
+  return 'Something went wrong starting the session.';
+}
+
+export function useTutorSession(): TutorSession {
+  const [state, setState] = useState<SessionState>('idle');
+  const [entries] = useState<ConversationEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [level] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
+
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+  const cleanup = useCallback(() => {
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    pcRef.current?.close();
+    pcRef.current = null;
+    if (audioElRef.current) {
+      audioElRef.current.srcObject = null;
+      audioElRef.current = null;
+    }
+  }, []);
+
+  const stop = useCallback(() => {
+    cleanup();
+    setState('idle');
+    setError(null);
+  }, [cleanup]);
+
+  const start = useCallback(async () => {
+    setError(null);
+    setState('connecting');
+    try {
+      // 1. Get a short-lived credential from our server.
+      const res = await fetch(provider.sessionEndpoint, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error ?? 'Could not start a tutor session.');
+      }
+      const { token, model } = data as { token: string; model: string };
+
+      // 2. Set up the peer connection and remote audio playback.
+      const pc = new RTCPeerConnection();
+      pcRef.current = pc;
+
+      const audioEl = new Audio();
+      audioEl.autoplay = true;
+      audioElRef.current = audioEl;
+      pc.ontrack = (event) => {
+        audioEl.srcObject = event.streams[0];
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') setState('listening');
+        if (pc.connectionState === 'failed') {
+          setError('The connection dropped.');
+          setState('error');
+        }
+      };
+
+      // 3. Capture the microphone (started by the user gesture that called start()).
+      const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = mic;
+      mic.getTracks().forEach((track) => pc.addTrack(track, mic));
+
+      // 4. Exchange SDP with the Realtime API using the ephemeral token.
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      const sdpRes = await fetch(provider.callsUrl(model), {
+        method: 'POST',
+        body: offer.sdp,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/sdp',
+        },
+      });
+      if (!sdpRes.ok) throw new Error('Could not connect to the tutor.');
+
+      await pc.setRemoteDescription({
+        type: 'answer',
+        sdp: await sdpRes.text(),
+      });
+    } catch (err) {
+      cleanup();
+      setError(errorMessage(err));
+      setState('error');
+    }
+  }, [cleanup]);
+
+  // Release audio/connection on unmount.
+  useEffect(() => cleanup, [cleanup]);
+
+  return { state, entries, error, level, start, stop };
+}
