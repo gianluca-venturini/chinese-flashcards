@@ -47,7 +47,7 @@
      transcript) with no pinyin/english. -->
 
 - [x] 8.1 Strengthen the `display_utterance` instructions in the system prompt so the model calls it for every spoken sentence
-- [ ] 8.2 Add a sentence-annotation endpoint (`POST /api/tutor/annotate`) and lib that returns `{ pinyin, english }` for a full Chinese sentence, auth-gated per route conventions
+- [x] 8.2 Add a sentence-annotation endpoint (`POST /api/tutor/annotate`) and lib that returns `{ pinyin, english }` for a full Chinese sentence, auth-gated per route conventions
 - [ ] 8.3 In `useTutorSession`, when a fallback (transcript-only) utterance is created, backfill its pinyin/english from the annotate endpoint and update the entry in place
 
 ## 7. Verification
