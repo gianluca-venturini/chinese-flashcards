@@ -10,7 +10,7 @@
 
 - [x] 2.1 Create `src/lib/tutor/types.ts`: conversation entry types (utterance, correction, learner turn), session state enum (idle/connecting/listening/thinking/speaking/error), sensitivity level type (LOW/MEDIUM/HIGH)
 - [x] 2.2 Create `src/lib/tutor/prompt.ts`: system prompt builder taking a sensitivity level, encoding the 李老师 persona, Chinese-only ordinary speech, mixed-language verbal correction explanations, HSK2 baseline, LOW/MEDIUM/HIGH thresholds for pronunciation + grammar, and the tool-usage rules
-- [ ] 2.3 Define the two tool schemas (`display_utterance` = {hanzi, pinyin, english}; `show_correction` = {targetHanzi, targetPinyin, description}) with the minimal fields
+- [x] 2.3 Define the two tool schemas (`display_utterance` = {hanzi, pinyin, english}; `show_correction` = {targetHanzi, targetPinyin, description}) with the minimal fields
 
 ## 3. Ephemeral credential endpoint
 
