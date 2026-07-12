@@ -44,7 +44,9 @@ Add `POST /api/tutor/session` following existing route conventions: require `sta
 
 ### Session configuration (persona, tools, sensitivity)
 
-On data-channel open, the client sends a `session.update` carrying: modalities `["text","audio"]`, `turn_detection: { type: "server_vad" }` (barge-in enabled), the system prompt (persona + pedagogy), and the two tool definitions. The **correction sensitivity level** is injected into the system prompt text; changing it re-sends `session.update` with regenerated instructions so it takes effect on subsequent turns without reconnecting.
+On data-channel open, the client sends a `session.update` carrying: `output_modalities: ["audio"]`, `turn_detection: null` (**push-to-talk** — see below), input-audio transcription, and the system prompt (persona + pedagogy); no tools are declared. The **correction sensitivity level** is injected into the system prompt text; changing it re-sends `session.update` with regenerated instructions so it takes effect on subsequent turns without reconnecting.
+
+**Push-to-talk turn-taking.** Server VAD made the tutor cut the learner off, so turn detection is disabled (`turn_detection: null`) and the learner holds a control (the SPACE key or an on-screen button) to talk. The mic track is disabled except while held; on press the client optionally interrupts a speaking tutor (`response.cancel`) and clears the input buffer, and on release it commits the buffer (`input_audio_buffer.commit`) and requests a reply (`response.create`). On connect the client sends one `response.create` so 李老师 greets first. Learner transcription still works (it's independent of turn detection).
 
 The system prompt encodes: 李老师 persona, Chinese-only for ordinary talk, always speak aloud, respond (don't echo the learner), mixed-language verbal explanation for corrections, HSK2 baseline, and the LOW/MEDIUM/HIGH thresholds for pronunciation+grammar. No tools are declared.
 

@@ -33,19 +33,24 @@ The system SHALL establish a speech-to-speech realtime session in which raw micr
 - **WHEN** the browser denies microphone access
 - **THEN** the session does not start and the learner is shown an actionable error
 
-### Requirement: Turn-taking and barge-in
+### Requirement: Push-to-talk turn-taking
 
-The session SHALL use server-side voice-activity detection for turn detection and SHALL allow the learner to interrupt (barge in) while the tutor is speaking.
+The session SHALL use push-to-talk turn-taking rather than automatic voice-activity detection, so the tutor never responds until the learner explicitly ends their turn. While the learner holds the talk control, their microphone audio is sent; on release, the learner's turn is committed and the tutor responds. If the learner starts talking while the tutor is speaking, the tutor's current response SHALL be interrupted so it stops talking over the learner.
 
-#### Scenario: Server VAD ends the learner's turn
+#### Scenario: Tutor waits for the learner to release
 
-- **WHEN** the learner stops speaking
-- **THEN** server-side VAD detects end-of-turn and the tutor begins its response without the learner pressing a button
+- **WHEN** the learner is holding the talk control and pauses mid-sentence
+- **THEN** the tutor does not respond, and it begins its response only after the learner releases the control
 
 #### Scenario: Learner interrupts the tutor
 
-- **WHEN** the learner begins speaking while the tutor is still speaking
-- **THEN** the tutor's current audio playback stops promptly and the tutor listens to the learner
+- **WHEN** the learner starts talking (presses the talk control) while the tutor is still speaking
+- **THEN** the tutor's current audio stops promptly and the session captures the learner's turn
+
+#### Scenario: Microphone only captures while held
+
+- **WHEN** the learner is not holding the talk control
+- **THEN** no microphone audio is sent to the model
 
 ### Requirement: Provider abstraction
 

@@ -62,17 +62,22 @@ The conversation panel SHALL auto-scroll to the latest entry, except when the us
 
 ### Requirement: Session controls
 
-The UI SHALL provide a Start/Stop control and a Mute toggle with a clear visual indicator of the muted state.
+The UI SHALL provide a Start/Stop control and a hold-to-talk control. The hold-to-talk control SHALL be operable both as an on-screen button (press and hold) and by holding the SPACE key, and SHALL show a clear indicator of whether the learner is currently talking. Releasing the control (or the key) SHALL end the learner's turn.
 
 #### Scenario: Start and stop a session
 
 - **WHEN** the learner activates the Start control
 - **THEN** a session begins; and **WHEN** the learner activates Stop, the session ends and returns to idle
 
-#### Scenario: Mute toggle
+#### Scenario: Hold to talk with the button
 
-- **WHEN** the learner toggles Mute
-- **THEN** the microphone input is suppressed and the UI shows a clear muted indicator, and toggling again resumes input
+- **WHEN** the learner presses and holds the talk button and then releases it
+- **THEN** their microphone is captured while held and their turn is sent to the tutor on release, with the button clearly indicating the held (talking) state
+
+#### Scenario: Hold to talk with the SPACE key
+
+- **WHEN** the learner holds the SPACE key during an active session
+- **THEN** it behaves exactly like holding the talk button, and releasing SPACE ends the turn
 
 ### Requirement: Session-state indicators
 

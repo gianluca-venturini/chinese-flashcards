@@ -64,6 +64,16 @@
 - [x] 9.3 Simplify `useTutorSession` to build each teacher utterance from the audio transcript + annotation backfill (remove the correction and no-tool-call fallback bookkeeping)
 - [x] 9.4 UI cleanup: remove the correction card and simplify entry rendering to teacher/learner turns only
 
+## 10. Push-to-talk turn-taking
+
+<!-- The tutor spoke over the learner with server_vad. Switch to push-to-talk:
+     hold SPACE (or the on-screen button) to talk; the tutor only replies on
+     release, and pressing while it speaks interrupts it. -->
+
+- [x] 10.1 Update spec/design: replace server-VAD turn-taking with push-to-talk (hold SPACE to talk, commit on release, press-to-interrupt)
+- [ ] 10.2 Disable server VAD (`turn_detection: null`) and add push-to-talk to the hook: gate the mic to the hold, commit the buffer + create a response on release, cancel the tutor's response when the learner starts talking, and trigger the tutor's opening greeting on connect
+- [ ] 10.3 Replace the mute control with a hold-to-talk button in the dock, bound to the SPACE key, with a clear held/idle indicator
+
 ## 7. Verification
 
 - [x] 7.1 Manually exercise a session end-to-end: mic permission, speaking, hearing a Mandarin reply, utterance/correction rendering, barge-in, mute, stop/reconnect, and switching sensitivity levels
