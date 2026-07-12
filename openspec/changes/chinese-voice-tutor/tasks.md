@@ -3,7 +3,7 @@
 - [x] 1.1 Add `REALTIME_VOICE` (and any realtime model id) to env handling and document required vars in README/`.env.local` example
 - [x] 1.2 Initialize shadcn/ui targeting Base UI with the neutral base color, scoped so it does not disturb existing pages; verify it builds with Tailwind v4
 - [x] 1.3 Add the shadcn primitives the tutor needs (button, card, toggle, and a select/segmented control for the sensitivity level) under `src/components/ui/`
-- [ ] 1.4 Add AI SDK Elements via the shadcn registry into `src/components/ai-elements/` — `conversation`, `message`, and `persona` — and confirm `Conversation`/`Message` render without a `useChat` provider and `Persona`'s Rive runtime loads/performs acceptably
+- [x] 1.4 Add AI SDK Elements via the shadcn registry into `src/components/ai-elements/` — `conversation`, `message`, and `persona` — and confirm `Conversation`/`Message` render without a `useChat` provider and `Persona`'s Rive runtime loads/performs acceptably
 - [ ] 1.5 Confirm the exact shadcn init + registry `add` commands against current docs and record them as `package.json` scripts (e.g. `ui:add:*`) so the component installs are self-documenting/reproducible
 
 ## 2. Types & prompt
