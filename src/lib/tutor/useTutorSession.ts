@@ -24,6 +24,7 @@ export interface TutorSession {
   stop: () => void;
   reconnect: () => Promise<void>;
   toggleMute: () => void;
+  setLevel: (level: SensitivityLevel) => void;
 }
 
 const provider = getRealtimeProvider();
@@ -40,7 +41,7 @@ export function useTutorSession(): TutorSession {
   const [state, setState] = useState<SessionState>('idle');
   const [entries, setEntries] = useState<ConversationEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [level] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
+  const [level, setLevelState] = useState<SensitivityLevel>(DEFAULT_SENSITIVITY);
   const [muted, setMuted] = useState(false);
   const [activity, setActivity] = useState<AudioActivity>('none');
 
@@ -294,6 +295,17 @@ export function useTutorSession(): TutorSession {
     });
   }, []);
 
+  // Changing the level re-sends session.update with a regenerated prompt so it
+  // takes effect on subsequent turns without reconnecting (no-op when idle).
+  const setLevel = useCallback(
+    (next: SensitivityLevel) => {
+      setLevelState(next);
+      levelRef.current = next;
+      sendEvent(provider.buildSessionUpdate(next));
+    },
+    [sendEvent]
+  );
+
   const getAmplitude = useCallback(() => amplitudeRef.current, []);
 
   // Release audio/connection on unmount.
@@ -311,5 +323,6 @@ export function useTutorSession(): TutorSession {
     stop,
     reconnect,
     toggleMute,
+    setLevel,
   };
 }
