@@ -37,10 +37,20 @@ export function useTutorSession(): TutorSession {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const dcRef = useRef<RTCDataChannel | null>(null);
+  const levelRef = useRef<SensitivityLevel>(level);
+  levelRef.current = level;
+
+  const sendEvent = useCallback((event: Record<string, unknown>) => {
+    const dc = dcRef.current;
+    if (dc?.readyState === 'open') dc.send(JSON.stringify(event));
+  }, []);
 
   const cleanup = useCallback(() => {
     micStreamRef.current?.getTracks().forEach((t) => t.stop());
     micStreamRef.current = null;
+    dcRef.current?.close();
+    dcRef.current = null;
     pcRef.current?.close();
     pcRef.current = null;
     if (audioElRef.current) {
@@ -79,11 +89,19 @@ export function useTutorSession(): TutorSession {
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') setState('listening');
         if (pc.connectionState === 'failed') {
           setError('The connection dropped.');
           setState('error');
         }
+      };
+
+      // Data channel carrying session events. On open, configure the session
+      // (persona, tools, VAD) and move to listening.
+      const dc = pc.createDataChannel(provider.eventChannel);
+      dcRef.current = dc;
+      dc.onopen = () => {
+        sendEvent(provider.buildSessionUpdate(levelRef.current));
+        setState('listening');
       };
 
       // 3. Capture the microphone (started by the user gesture that called start()).

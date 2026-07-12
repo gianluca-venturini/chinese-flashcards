@@ -26,7 +26,7 @@
 ## 5. Realtime session hook
 
 - [x] 5.1 Create `src/lib/tutor/useTutorSession.ts`: fetch ephemeral token, set up `RTCPeerConnection`, capture mic via `getUserMedia`, attach remote audio track to an `<audio>` element started on the user gesture
-- [ ] 5.2 Open the `oai-events` data channel and send `session.update` with modalities `["text","audio"]`, `server_vad` turn detection (barge-in), persona/system prompt, and tool definitions
+- [x] 5.2 Open the `oai-events` data channel and send `session.update` with modalities `["text","audio"]`, `server_vad` turn detection (barge-in), persona/system prompt, and tool definitions
 - [ ] 5.3 Parse data-channel events into typed conversation entries (`display_utterance`, `show_correction`), append learner turns from input transcription when available, and fall back to transcript text if a tutor turn emits no tool call
 - [ ] 5.4 Drive the session state machine (idle → connecting → listening ↔ thinking ↔ speaking, error) and expose start/stop, mute, and reconnect actions; stopping releases the mic and closes the connection
 - [ ] 5.6 Add Web Audio `AnalyserNode`s on the mic stream and the remote tutor track; expose live audio-activity signals (which source is active + amplitude) so the UI can drive the `Persona` visual reactively
