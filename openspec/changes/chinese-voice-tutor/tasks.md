@@ -38,7 +38,7 @@
 - [x] 6.2 Build the pinned dock: `Persona` state visual mapping session state → `idle/listening/thinking/speaking` and driven by the live audio-activity signals from 5.6 so it reacts to the learner's mic and the tutor's voice (custom red error/reconnect treatment for `error`), the current live utterance (Hanzi + pinyin), Start/Stop and Mute (with visual muted indicator), and the sensitivity control (LOW/MEDIUM/HIGH, default MEDIUM, visible active level)
 - [x] 6.3 Build the live utterance display in the dock: Hanzi `text-2xl`, pinyin medium/muted, English small italic secondary
 - [x] 6.4 Render the thread with Elements `Conversation`/`ConversationContent`: tutor turns as left `Message` bubbles (🎓 李老师) with Hanzi/pinyin/English, learner turns as right `Message` bubbles (🎤 You); rely on `Conversation` auto-scroll + `ConversationScrollButton` for the scrolled-up case
-- [ ] 6.5 Build the inline correction card (amber styling `bg-amber-50 border-l-4 border-amber-400`, dark `bg-amber-950/30 border-amber-500`) rendered in the thread flow, showing target Hanzi/pinyin, the `description`, and the retry label; covers pronunciation and grammar, and retains its styling in scrollback
+- [x] 6.5 Build the inline correction card (amber styling `bg-amber-50 border-l-4 border-amber-400`, dark `bg-amber-950/30 border-amber-500`) rendered in the thread flow, showing target Hanzi/pinyin, the `description`, and the retry label; covers pronunciation and grammar, and retains its styling in scrollback
 
 ## 7. Verification
 

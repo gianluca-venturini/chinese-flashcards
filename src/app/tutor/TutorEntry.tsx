@@ -2,6 +2,7 @@
 
 import { Message, MessageContent } from '@/components/ai-elements/message';
 import type { ConversationEntry } from '@/lib/tutor/types';
+import { CorrectionCard } from './CorrectionCard';
 
 export function TutorEntry({ entry }: { entry: ConversationEntry }) {
   if (entry.kind === 'utterance') {
@@ -34,6 +35,5 @@ export function TutorEntry({ entry }: { entry: ConversationEntry }) {
     );
   }
 
-  // Correction entries are rendered in task 6.5.
-  return null;
+  return <CorrectionCard entry={entry} />;
 }
