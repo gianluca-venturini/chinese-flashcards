@@ -15,3 +15,15 @@ export const CATEGORY_COLORS: { [key in CategoryId]: string } = {
 
 export const UNKNOWN_CATEGORY_COLOR = '#FFFFFF';
 
+
+// Soft colors from hard (score 0) to easy (score 1). The tile color is mixed
+// between the two nearest stops.
+export const DIFFICULTY_COLOR_STOPS: readonly string[] = [
+  '#E5989B', // soft rose (hard)
+  '#F4B183', // soft peach
+  '#F6D186', // soft sand
+  '#C5D89D', // soft sage
+  '#9CC5A1', // soft green (easy)
+];
+
+export const UNREVIEWED_COLOR = '#D4D4D8'; // Tailwind zinc-300

@@ -2,7 +2,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { type Word } from "@/lib/schema";
 import { CategoryId, CATEGORY_IDS, CATEGORY_META } from "@/lib/categories";
-import { CATEGORY_COLORS, UNKNOWN_CATEGORY_COLOR } from "@/lib/colors";
+import { CATEGORY_COLORS, DIFFICULTY_COLOR_STOPS, UNKNOWN_CATEGORY_COLOR, UNREVIEWED_COLOR } from "@/lib/colors";
+import {
+  compareByDifficulty,
+  DIFFICULTY_LABELS,
+  getDifficultyColor,
+  getDifficultyLevel,
+  type DifficultyLevel,
+} from "@/lib/difficulty";
 import { getShortDefinition } from "@/lib/formatDefinition";
 import { getAllWords, putWord, putWordsRaw } from "@/lib/storage";
 import { syncFromServer, ensureWords } from "@/lib/sync";
@@ -68,6 +75,59 @@ function compareWords(a: Word, b: Word, key: SortKey, dir: SortDir): number {
   return dir === 'asc' ? cmp : -cmp;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function pluralDays(days: number): string {
+  return `${days} ${days === 1 ? 'day' : 'days'}`;
+}
+
+function formatLastReview(lastReviewedAt: string, now: Date): string {
+  const days = Math.floor((now.getTime() - Date.parse(lastReviewedAt)) / MS_PER_DAY);
+  const date = lastReviewedAt.slice(0, 10);
+  return days === 0 ? `today (${date})` : `${pluralDays(days)} ago (${date})`;
+}
+
+function formatNextReview(word: Word, now: Date): string {
+  const dueAt = Date.parse(word.last_reviewed_at!) + word.i * MS_PER_DAY;
+  const days = Math.ceil((dueAt - now.getTime()) / MS_PER_DAY);
+  return days <= 0 ? 'due now' : `in ${pluralDays(days)}`;
+}
+
+// The SM-2 values of a word, shown in the hover card.
+function ReviewDetails({ word }: { word: Word }) {
+  const level = getDifficultyLevel(word);
+  if (word.last_reviewed_at === null) {
+    return (
+      <p className="text-sm font-semibold text-zinc-900">
+        N/A — not reviewed yet
+      </p>
+    );
+  }
+  const now = new Date();
+  const rows: [string, string][] = [
+    ['Ease factor', word.ef.toFixed(2)],
+    ['Correct in a row', String(word.n)],
+    ['Interval', pluralDays(word.i)],
+    ['Last review', formatLastReview(word.last_reviewed_at, now)],
+    ['Next review', formatNextReview(word, now)],
+  ];
+  return (
+    <div className="w-full">
+      <p className="text-sm font-semibold text-zinc-900 mb-1">
+        {DIFFICULTY_LABELS[level]}
+      </p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-sm text-zinc-900">
+        {rows.map(([label, value]) => (
+          <div key={label} className="contents">
+            <dt className="text-zinc-700">{label}</dt>
+            <dd className="text-right tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function SortIndicator({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) {
     return <span className="text-zinc-300 dark:text-zinc-600">↕</span>;
@@ -107,6 +167,7 @@ export default function WordsPage() {
   const [isBulkCreating, setIsBulkCreating] = useState<boolean>(false);
   const [sortKey, setSortKey] = useState<SortKey>('created');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [colorMode, setColorMode] = useState<'category' | 'difficulty'>('category');
 
   const visibleWords = useMemo(
     () => (showDeprecated ? words : words.filter((w) => !w.deprecated)),
@@ -117,6 +178,22 @@ export default function WordsPage() {
     () => [...visibleWords].sort((a, b) => compareWords(a, b, sortKey, sortDir)),
     [visibleWords, sortKey, sortDir],
   );
+
+  const tileWords = useMemo(
+    () => (colorMode === 'difficulty' ? [...visibleWords].sort(compareByDifficulty) : visibleWords),
+    [visibleWords, colorMode],
+  );
+
+  const difficultyCounts = useMemo(() => {
+    const counts: { [key in DifficultyLevel]: number } = { hard: 0, medium: 0, easy: 0, na: 0 };
+    for (const word of visibleWords) counts[getDifficultyLevel(word)]++;
+    return counts;
+  }, [visibleWords]);
+
+  const tileColor = (word: Word): string =>
+    colorMode === 'difficulty'
+      ? getDifficultyColor(word)
+      : CATEGORY_COLORS[word.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR;
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -438,6 +515,20 @@ export default function WordsPage() {
             >
             Add multiple
             </button>
+            {viewMode === 'tiles' && (
+              <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 overflow-hidden">
+                {(['category', 'difficulty'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setColorMode(mode)}
+                    className={`px-3 py-2 text-sm font-medium ${colorMode === mode ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+                    title={mode === 'category' ? 'Color by category' : 'Color and sort by difficulty'}
+                  >
+                    {mode === 'category' ? 'Category' : 'Difficulty'}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 overflow-hidden">
               <button
                 onClick={() => setViewMode('tiles')}
@@ -469,9 +560,7 @@ export default function WordsPage() {
         {viewMode === 'tiles' ? (
           <>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-1 relative">
-              {visibleWords.map((word, index) => {
-                const categoryColor =
-              CATEGORY_COLORS[word.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR;
+              {tileWords.map((word, index) => {
                 const charCount = word.chinese.length;
                 return (
                   <div
@@ -479,7 +568,7 @@ export default function WordsPage() {
                     data-word-card
                     className={`flex items-center justify-center rounded p-0.5 shadow-sm transition-shadow hover:shadow-md cursor-pointer relative ${word.deprecated ? 'opacity-40' : ''}`}
                     style={{
-                      backgroundColor: categoryColor,
+                      backgroundColor: tileColor(word),
                       gridColumn: charCount > 1 ? `span ${Math.min(charCount, 3)}` : 'span 1',
                       aspectRatio: charCount === 1 ? '1' : 'auto',
                       minHeight: '1.5rem'
@@ -518,7 +607,7 @@ export default function WordsPage() {
                 <div
                   className="flex flex-col items-center justify-center rounded-2xl p-8 shadow-2xl min-w-[300px] max-w-[90vw]"
                   style={{
-                    backgroundColor: CATEGORY_COLORS[hoveredWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
+                    backgroundColor: tileColor(hoveredWord),
                   }}
                 >
                   <h1 className="text-5xl font-bold text-zinc-900 mb-4">
@@ -530,32 +619,62 @@ export default function WordsPage() {
                   <p className="text-lg text-zinc-900">
                     {hoveredWord.english ? getShortDefinition(hoveredWord.english) : ''}
                   </p>
+                  <div className="mt-4 pt-3 w-full border-t border-zinc-900/20">
+                    <ReviewDetails word={hoveredWord} />
+                  </div>
                 </div>
               </div>
             )}
             <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {CATEGORY_IDS.map((id) => (
-                  <div key={id} className="inline-flex items-center gap-2">
+              {colorMode === 'difficulty' ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-xs text-zinc-700 dark:text-zinc-300">Hard</span>
+                    <span
+                      className="inline-block h-4 w-32 rounded border border-zinc-300 dark:border-zinc-600"
+                      style={{ backgroundImage: `linear-gradient(to right, ${DIFFICULTY_COLOR_STOPS.join(', ')})` }}
+                    />
+                    <span className="text-xs text-zinc-700 dark:text-zinc-300">Easy</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2">
                     <span
                       className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
-                      style={{ backgroundColor: CATEGORY_COLORS[id] }}
+                      style={{ backgroundColor: UNREVIEWED_COLOR }}
                     />
                     <span className="text-xs text-zinc-700 dark:text-zinc-300">
-                      {CATEGORY_META[id].label}
+                      {DIFFICULTY_LABELS.na}
                     </span>
                   </div>
-                ))}
-                <div className="inline-flex items-center gap-2">
-                  <span
-                    className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
-                    style={{ backgroundColor: UNKNOWN_CATEGORY_COLOR }}
-                  />
                   <span className="text-xs text-zinc-700 dark:text-zinc-300">
-                    Uncategorized
+                    {(['hard', 'medium', 'easy', 'na'] as const)
+                      .map((level) => `${DIFFICULTY_LABELS[level]} ${difficultyCounts[level]}`)
+                      .join(' · ')}
                   </span>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {CATEGORY_IDS.map((id) => (
+                    <div key={id} className="inline-flex items-center gap-2">
+                      <span
+                        className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
+                        style={{ backgroundColor: CATEGORY_COLORS[id] }}
+                      />
+                      <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                        {CATEGORY_META[id].label}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="inline-flex items-center gap-2">
+                    <span
+                      className="inline-block h-4 w-4 rounded border border-zinc-300 dark:border-zinc-600"
+                      style={{ backgroundColor: UNKNOWN_CATEGORY_COLOR }}
+                    />
+                    <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                      Uncategorized
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (
