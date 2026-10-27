@@ -277,6 +277,7 @@ function HomeContent() {
             const isTopCard = index === 0;
             const scale = 1 - (index * 0.05);
             const translateY = -(index * 10);
+            const chineseLength = [...currentWord.chinese].length;
 
             return (
               <div
@@ -288,7 +289,7 @@ function HomeContent() {
                 onTouchStart={isTopCard ? (e) => handleSwipeStart(e.touches[0].clientX) : undefined}
                 onTouchMove={isTopCard ? (e) => handleSwipeMove(e.touches[0].clientX) : undefined}
                 onTouchEnd={isTopCard ? handleSwipeEnd : undefined}
-                className="absolute left-0 top-0 grid w-full h-full cursor-pointer rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
+                className="@container absolute left-0 top-0 grid w-full h-full cursor-pointer rounded-3xl bg-white p-12 shadow-lg transition-all hover:shadow-xl sm:p-24 dark:bg-zinc-900"
                 style={{
                   zIndex: MAX_WORDS_STACK - index,
                   transform: isTopCard
@@ -303,12 +304,17 @@ function HomeContent() {
                   pointerEvents: isTopCard ? 'auto' : 'none',
                   backgroundColor: CATEGORY_COLORS[currentWord.category as CategoryId] ?? UNKNOWN_CATEGORY_COLOR,
                   gridTemplateRows: '1fr auto 1fr',
+                  gridTemplateColumns: 'minmax(0, 1fr)',
                   justifyItems: 'center',
                 }}
               >
                 <div />
-                <div className="flex flex-col items-center">
-                  <h1 className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 sm:text-[5rem]">
+                <div className="flex max-w-full flex-col items-center">
+                  {/* Shrink the word so it fits the card width; a Chinese character is about 1em wide. */}
+                  <h1
+                    data-len={chineseLength > 4 ? 'long' : chineseLength}
+                    className="whitespace-nowrap text-[5rem] font-bold text-zinc-900 data-[len=2]:text-[min(5rem,48cqw)] data-[len=3]:text-[min(5rem,32cqw)] data-[len=4]:text-[min(5rem,24cqw)] data-[len=long]:text-[min(5rem,24cqw)] data-[len=long]:whitespace-normal data-[len=long]:text-center"
+                  >
                     {currentWord.chinese}
                   </h1>
                   <p
