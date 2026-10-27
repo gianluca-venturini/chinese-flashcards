@@ -954,31 +954,43 @@ export default function WordsPage() {
                               </>
                             ) : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            {/* The status label shows by default; the button replaces it on hover or when the row is selected */}
-                            <span
-                              className={`px-3 py-1 text-xs font-medium ${
-                                selectedWords.has(word.chinese) ? 'hidden' : 'inline-block group-hover:hidden'
-                              } ${
-                                word.deprecated
-                                  ? 'text-amber-700 dark:text-amber-300'
-                                  : 'text-green-700 dark:text-green-300'
-                              }`}
-                            >
-                              {word.deprecated ? 'Deprecated' : 'Included'}
-                            </span>
-                            <button
-                              onClick={() => handleToggleDeprecated(word)}
-                              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                                selectedWords.has(word.chinese) ? 'inline-block' : 'hidden group-hover:inline-block'
-                              } ${
-                                word.deprecated
-                                  ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
-                                  : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
-                              }`}
-                            >
-                              {word.deprecated ? 'Restore' : 'Deprecate'}
-                            </button>
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            {/* The icon button always takes its space, so showing it on hover or selection does not move the layout */}
+                            <div className="flex items-center justify-end gap-1">
+                              <span
+                                className={`text-xs font-medium ${
+                                  word.deprecated
+                                    ? 'text-amber-700 dark:text-amber-300'
+                                    : 'text-green-700 dark:text-green-300'
+                                }`}
+                              >
+                                {word.deprecated ? 'Deprecated' : 'Included'}
+                              </span>
+                              <button
+                                onClick={() => handleToggleDeprecated(word)}
+                                title={word.deprecated ? 'Restore' : 'Deprecate'}
+                                aria-label={word.deprecated ? 'Restore' : 'Deprecate'}
+                                className={`p-1 rounded-md ${
+                                  selectedWords.has(word.chinese) ? 'visible' : 'invisible group-hover:visible'
+                                } ${
+                                  word.deprecated
+                                    ? 'text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30'
+                                    : 'text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                                }`}
+                              >
+                                {word.deprecated ? (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                    <path d="M3 3v5h5" />
+                                  </svg>
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="m4.9 4.9 14.2 14.2" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
                           </td>
                         </>
                       )}
