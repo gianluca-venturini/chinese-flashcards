@@ -906,7 +906,7 @@ export default function WordsPage() {
                   {sortedWords.map((word, index) => (
                     <tr
                       key={`${word.chinese}-${index}`}
-                      className={`border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
+                      className={`group border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
                       onClick={(e) => handleRowSelect(index, e.shiftKey)}
                     >
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -955,9 +955,23 @@ export default function WordsPage() {
                             ) : '-'}
                           </td>
                           <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            {/* The status label shows by default; the button replaces it on hover or when the row is selected */}
+                            <span
+                              className={`px-3 py-1 text-xs font-medium ${
+                                selectedWords.has(word.chinese) ? 'hidden' : 'inline-block group-hover:hidden'
+                              } ${
+                                word.deprecated
+                                  ? 'text-amber-700 dark:text-amber-300'
+                                  : 'text-green-700 dark:text-green-300'
+                              }`}
+                            >
+                              {word.deprecated ? 'Deprecated' : 'Included'}
+                            </span>
                             <button
                               onClick={() => handleToggleDeprecated(word)}
                               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                selectedWords.has(word.chinese) ? 'inline-block' : 'hidden group-hover:inline-block'
+                              } ${
                                 word.deprecated
                                   ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
                                   : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
