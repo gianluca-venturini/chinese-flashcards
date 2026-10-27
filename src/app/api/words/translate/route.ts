@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stackServerApp } from '@/stack';
+import { isAuthorizedUser, EMAIL_NOT_AUTHORIZED } from '@/lib/allowedEmails';
 import { translateChineseWords, TranslationResult } from '@/lib/translate';
 import { z } from 'zod';
 
@@ -18,6 +19,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },
         { status: 401 }
+      );
+    }
+
+    if (!isAuthorizedUser(user)) {
+      return NextResponse.json(
+        { error: EMAIL_NOT_AUTHORIZED, success: false },
+        { status: 403 }
       );
     }
 

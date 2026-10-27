@@ -3,10 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackServerApp } from "@/stack";
+import { isAuthorizedUser } from "@/lib/allowedEmails";
 import Link from "next/link";
 import SignOutButton from "@/app/components/SignOutButton";
 import ServiceWorkerRegistrar from "@/app/components/ServiceWorkerRegistrar";
 import OfflineBadge from "@/app/components/OfflineBadge";
+import EmailGate from "@/app/components/EmailGate";
 import CustomSessionMenuItem from "@/app/components/CustomSessionMenuItem";
 
 const geistSans = Geist({
@@ -50,6 +52,17 @@ async function UserInfoBar() {
     );
   }
 
+  if (!isAuthorizedUser(user)) {
+    return (
+      <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 flex justify-between items-center">
+        <span className="text-zinc-800 dark:text-zinc-200 text-sm">
+          Signed in as {user.primaryEmail}
+        </span>
+        <SignOutButton />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 flex justify-between items-center">
       <span className="text-zinc-800 dark:text-zinc-200 text-sm">
@@ -75,6 +88,11 @@ async function UserInfoBar() {
   );
 }
 
+async function AuthorizedContent({ children }: { children: React.ReactNode }) {
+  const user = await stackServerApp.getUser();
+  return <EmailGate authorized={!user || isAuthorizedUser(user)}>{children}</EmailGate>;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -91,7 +109,7 @@ export default function RootLayout({
             <OfflineBadge />
             <ServiceWorkerRegistrar />
             <div className="flex-1 flex flex-col min-h-0">
-              {children}
+              <AuthorizedContent>{children}</AuthorizedContent>
             </div>
           </StackTheme>
         </StackProvider>

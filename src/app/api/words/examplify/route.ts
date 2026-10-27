@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { stackServerApp } from '@/stack';
+import { isAuthorizedUser, EMAIL_NOT_AUTHORIZED } from '@/lib/allowedEmails';
 import { generateExampleSentences, generatePinyin } from '@/lib/translate';
 
 const RequestSchema = z.object({
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
     const user = await stackServerApp.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized', success: false }, { status: 401 });
+    }
+    if (!isAuthorizedUser(user)) {
+      return NextResponse.json({ error: EMAIL_NOT_AUTHORIZED, success: false }, { status: 403 });
     }
 
     const body = await request.json();
