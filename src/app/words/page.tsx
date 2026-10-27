@@ -90,6 +90,7 @@ export default function WordsPage() {
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [pinyinValue, setPinyinValue] = useState<string>("");
+  const [categoryValue, setCategoryValue] = useState<string>("");
   const [exampleChineseValue, setExampleChineseValue] = useState<string>("");
   const [examplePinyinValue, setExamplePinyinValue] = useState<string>("");
   const [exampleEnglishValue, setExampleEnglishValue] = useState<string>("");
@@ -156,6 +157,7 @@ export default function WordsPage() {
     setEditingWord(word);
     setEnglishValue(word.english ?? "");
     setPinyinValue(word.pinyin ?? "");
+    setCategoryValue(word.category ?? "");
     setExampleChineseValue(word.example_chinese ?? "");
     setExamplePinyinValue(word.example_pinyin ?? "");
     setExampleEnglishValue(word.example_english ?? "");
@@ -181,6 +183,7 @@ export default function WordsPage() {
     setEditingWord(null);
     setEnglishValue("");
     setPinyinValue("");
+    setCategoryValue("");
     setExampleChineseValue("");
     setExamplePinyinValue("");
     setExampleEnglishValue("");
@@ -195,6 +198,7 @@ export default function WordsPage() {
       await saveChanges(editingWord, {
         pinyin: pinyinValue,
         english: englishValue || null,
+        category: categoryValue || null,
         example_chinese: exampleChineseValue || null,
         example_pinyin: examplePinyinValue || null,
         example_english: exampleEnglishValue || null,
@@ -1060,6 +1064,21 @@ export default function WordsPage() {
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                 rows={4}
               />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Category
+              </label>
+              <select
+                value={categoryValue}
+                onChange={(e) => setCategoryValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              >
+                <option value="">No category</option>
+                {CATEGORY_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {CATEGORY_META[id].label}
+                  </option>
+                ))}
+              </select>
               <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Example (Chinese)
               </label>
