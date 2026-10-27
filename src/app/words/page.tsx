@@ -889,17 +889,17 @@ export default function WordsPage() {
                             <SortIndicator active={sortKey === 'example'} dir={sortDir} />
                           </span>
                         </th>
+                        <th
+                          className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-32 cursor-pointer select-none"
+                          onClick={() => handleSort('status')}
+                        >
+                          <span className="flex items-center justify-end gap-1">
+                            Status
+                            <SortIndicator active={sortKey === 'status'} dir={sortDir} />
+                          </span>
+                        </th>
                       </>
                     )}
-                    <th
-                      className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-600 w-32 cursor-pointer select-none"
-                      onClick={() => handleSort('status')}
-                    >
-                      <span className="flex items-center justify-end gap-1">
-                        Status
-                        <SortIndicator active={sortKey === 'status'} dir={sortDir} />
-                      </span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -954,20 +954,20 @@ export default function WordsPage() {
                               </>
                             ) : '-'}
                           </td>
+                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => handleToggleDeprecated(word)}
+                              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                                word.deprecated
+                                  ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                  : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+                              }`}
+                            >
+                              {word.deprecated ? 'Restore' : 'Deprecate'}
+                            </button>
+                          </td>
                         </>
                       )}
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleToggleDeprecated(word)}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                            word.deprecated
-                              ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
-                              : 'text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
-                          }`}
-                        >
-                          {word.deprecated ? 'Restore' : 'Deprecate'}
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
