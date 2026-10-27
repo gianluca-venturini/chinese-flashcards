@@ -10,7 +10,8 @@ import { getAllWords } from "@/lib/storage";
 import { syncFromServer } from "@/lib/sync";
 import { submitReview as submitReviewLocal } from "@/lib/review";
 import { getDueWords } from "@/lib/dueWords";
-import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
+import { getHardestWords } from "@/lib/difficulty";
+import { CUSTOM_SIZE_PARAM, parseSessionOrder, SESSION_ORDER_PARAM, type SessionOrder } from "@/lib/sessionParams";
 import { applySm2 } from "@/lib/sm2";
 import SessionSummary, { type SessionResult } from "@/app/components/SessionSummary";
 
@@ -47,7 +48,7 @@ function HomeContent() {
   const SWIPE_THRESHOLD_X = screenWidth / 6;
   const MAX_SWIPE_OFFSET_X = screenWidth / 2;
 
-  const startSession = useCallback(async (size: number) => {
+  const startSession = useCallback(async (size: number, order: SessionOrder = 'chronological') => {
     setLoading(true);
     setError(null);
     setRepeatWords([]);
@@ -64,7 +65,7 @@ function HomeContent() {
     }
     try {
       const allWords = await getAllWords();
-      setWords(getDueWords(allWords, new Date(), size));
+      setWords(order === 'difficult' ? getHardestWords(allWords, size) : getDueWords(allWords, new Date(), size));
     } catch (err) {
       console.error('Error loading words from storage:', err);
       setError('Failed to load words.');
@@ -82,7 +83,7 @@ function HomeContent() {
       const parsed = parseInt(customSizeParam, 10);
       const size = Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_SESSION_SIZE;
       initializedRef.current = true;
-      void startSession(size);
+      void startSession(size, parseSessionOrder(searchParams.get(SESSION_ORDER_PARAM)));
       // Clean the URL so a refresh doesn't replay the custom session.
       router.replace('/');
     } else if (!initializedRef.current) {

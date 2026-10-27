@@ -1,17 +1,24 @@
 "use client";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CUSTOM_SIZE_PARAM } from "@/lib/sessionParams";
+import { CUSTOM_SIZE_PARAM, SESSION_ORDER_PARAM, type SessionOrder } from "@/lib/sessionParams";
 
 const DEFAULT_INPUT = "10";
+
+const ORDER_LABELS: { [key in SessionOrder]: string } = {
+  chronological: "Next chronological",
+  difficult: "Most difficult first",
+};
 
 export default function CustomSessionMenuItem() {
   const router = useRouter();
   const [showDialog, setShowDialog] = useState<boolean>(false);
   const [input, setInput] = useState<string>(DEFAULT_INPUT);
+  const [order, setOrder] = useState<SessionOrder>("chronological");
 
   const openDialog = useCallback(() => {
     setInput(DEFAULT_INPUT);
+    setOrder("chronological");
     setShowDialog(true);
   }, []);
 
@@ -27,9 +34,9 @@ export default function CustomSessionMenuItem() {
       e.preventDefault();
       if (!isValid) return;
       setShowDialog(false);
-      router.push(`/?${CUSTOM_SIZE_PARAM}=${parsed}`);
+      router.push(`/?${CUSTOM_SIZE_PARAM}=${parsed}&${SESSION_ORDER_PARAM}=${order}`);
     },
-    [isValid, parsed, router]
+    [isValid, parsed, order, router]
   );
 
   return (
@@ -66,6 +73,21 @@ export default function CustomSessionMenuItem() {
                 required
                 autoFocus
               />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Order
+              </label>
+              <div className="flex rounded-lg border border-zinc-300 dark:border-zinc-600 overflow-hidden mb-4">
+                {(["chronological", "difficult"] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setOrder(value)}
+                    className={`flex-1 px-3 py-2 text-sm font-medium ${order === value ? "bg-blue-600 text-white" : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700"}`}
+                  >
+                    {ORDER_LABELS[value]}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"

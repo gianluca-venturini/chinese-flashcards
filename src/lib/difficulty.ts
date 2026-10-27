@@ -74,3 +74,30 @@ export function getDifficultyColor(word: Word): string {
   const score = getDifficultyScore(word);
   return score === null ? UNREVIEWED_COLOR : scoreToColor(score);
 }
+
+const LEVEL_RANK: { [key in DifficultyLevel]: number } = { hard: 0, medium: 1, easy: 2, na: 3 };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Sort key for words in the same level: the SM-2 due date for reviewed words,
+// the creation date for never-reviewed words. Older dates come first.
+function sameLevelTime(word: Word): number {
+  if (word.last_reviewed_at === null) return Date.parse(word.created_at);
+  return Date.parse(word.last_reviewed_at) + word.i * MS_PER_DAY;
+}
+
+// All words that are not deprecated, also words that are not due yet: Hard,
+// then Medium, then Easy, then never reviewed. In one level, the most overdue
+// word comes first.
+export function getHardestWords(words: Word[], limit?: number): Word[] {
+  const sorted = words
+    .filter((w) => !w.deprecated)
+    .sort((a, b) => {
+      const levelDiff = LEVEL_RANK[getDifficultyLevel(a)] - LEVEL_RANK[getDifficultyLevel(b)];
+      if (levelDiff !== 0) return levelDiff;
+      const timeDiff = sameLevelTime(a) - sameLevelTime(b);
+      if (timeDiff !== 0) return timeDiff;
+      return a.chinese.localeCompare(b.chinese);
+    });
+  return limit !== undefined ? sorted.slice(0, limit) : sorted;
+}

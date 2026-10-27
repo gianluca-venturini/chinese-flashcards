@@ -4,6 +4,7 @@ import {
   getDifficultyColor,
   getDifficultyLevel,
   getDifficultyScore,
+  getHardestWords,
   scoreToColor,
 } from './difficulty';
 import { applySm2 } from './sm2';
@@ -118,5 +119,53 @@ describe('colors', () => {
 
   test('gives the hard color for ef 1.3', () => {
     expect(getDifficultyColor(makeWord({ ef: 1.3 }))).toBe(DIFFICULTY_COLOR_STOPS[0]);
+  });
+});
+
+describe('getHardestWords', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const at = (daysAgo: number) => new Date(Date.parse(REVIEWED_AT) - daysAgo * DAY).toISOString();
+
+  test('sorts Hard, then Medium, then Easy, then never reviewed', () => {
+    const words = [
+      makeWord({ chinese: '新', last_reviewed_at: null }),
+      makeWord({ chinese: '易', ef: 2.5 }),
+      makeWord({ chinese: '中', ef: 1.8 }),
+      makeWord({ chinese: '难', ef: 1.3 }),
+    ];
+    expect(getHardestWords(words).map((w) => w.chinese)).toEqual(['难', '中', '易', '新']);
+  });
+
+  test('in one level, the oldest SM-2 due date comes first, not the lowest ef', () => {
+    // 甲: ef 1.3, reviewed 1 day ago, i 1 -> due today.
+    // 乙: ef 1.5, reviewed 10 days ago, i 6 -> due 4 days ago.
+    const words = [
+      makeWord({ chinese: '甲', ef: 1.3, i: 1, last_reviewed_at: at(1) }),
+      makeWord({ chinese: '乙', ef: 1.5, i: 6, last_reviewed_at: at(10) }),
+    ];
+    expect(getHardestWords(words).map((w) => w.chinese)).toEqual(['乙', '甲']);
+  });
+
+  test('includes words that are not due yet', () => {
+    const notDue = makeWord({ chinese: '难', ef: 1.3, i: 30, last_reviewed_at: new Date().toISOString() });
+    expect(getHardestWords([notDue]).map((w) => w.chinese)).toEqual(['难']);
+  });
+
+  test('never-reviewed words are sorted by oldest created_at', () => {
+    const words = [
+      makeWord({ chinese: '甲', last_reviewed_at: null, created_at: at(1) }),
+      makeWord({ chinese: '乙', last_reviewed_at: null, created_at: at(5) }),
+    ];
+    expect(getHardestWords(words).map((w) => w.chinese)).toEqual(['乙', '甲']);
+  });
+
+  test('removes deprecated words', () => {
+    const words = [makeWord({ chinese: '旧', ef: 1.3, deprecated: true }), makeWord({ chinese: '难', ef: 1.3 })];
+    expect(getHardestWords(words).map((w) => w.chinese)).toEqual(['难']);
+  });
+
+  test('limit cuts the result', () => {
+    const words = [makeWord({ chinese: '难', ef: 1.3 }), makeWord({ chinese: '易', ef: 2.5 })];
+    expect(getHardestWords(words, 1).map((w) => w.chinese)).toEqual(['难']);
   });
 });
