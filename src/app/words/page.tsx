@@ -90,6 +90,9 @@ export default function WordsPage() {
   const [isGeneratingExamples, setIsGeneratingExamples] = useState<boolean>(false);
   const [englishValue, setEnglishValue] = useState<string>("");
   const [pinyinValue, setPinyinValue] = useState<string>("");
+  const [exampleChineseValue, setExampleChineseValue] = useState<string>("");
+  const [examplePinyinValue, setExamplePinyinValue] = useState<string>("");
+  const [exampleEnglishValue, setExampleEnglishValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newChinese, setNewChinese] = useState<string>("");
@@ -153,6 +156,9 @@ export default function WordsPage() {
     setEditingWord(word);
     setEnglishValue(word.english ?? "");
     setPinyinValue(word.pinyin ?? "");
+    setExampleChineseValue(word.example_chinese ?? "");
+    setExamplePinyinValue(word.example_pinyin ?? "");
+    setExampleEnglishValue(word.example_english ?? "");
   };
 
   const handleToggleDeprecated = async (word: Word) => {
@@ -175,6 +181,9 @@ export default function WordsPage() {
     setEditingWord(null);
     setEnglishValue("");
     setPinyinValue("");
+    setExampleChineseValue("");
+    setExamplePinyinValue("");
+    setExampleEnglishValue("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,7 +192,13 @@ export default function WordsPage() {
 
     setIsSubmitting(true);
     try {
-      await saveChanges(editingWord, { pinyin: pinyinValue, english: englishValue || null });
+      await saveChanges(editingWord, {
+        pinyin: pinyinValue,
+        english: englishValue || null,
+        example_chinese: exampleChineseValue || null,
+        example_pinyin: examplePinyinValue || null,
+        example_english: exampleEnglishValue || null,
+      });
       await refreshWords();
       handleDialogClose();
     } catch (err) {
@@ -1015,11 +1030,11 @@ export default function WordsPage() {
           onClick={handleDialogClose}
         >
           <div
-            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 select-text"
+            className="bg-white dark:bg-zinc-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto select-text"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-              Edit Translation
+              Edit Word
             </h2>
             <div className="mb-4">
               <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
@@ -1044,6 +1059,33 @@ export default function WordsPage() {
                 onChange={(e) => setEnglishValue(e.target.value)}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                 rows={4}
+              />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Example (Chinese)
+              </label>
+              <input
+                type="text"
+                value={exampleChineseValue}
+                onChange={(e) => setExampleChineseValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Example pinyin
+              </label>
+              <input
+                type="text"
+                value={examplePinyinValue}
+                onChange={(e) => setExamplePinyinValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+              />
+              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Example (English)
+              </label>
+              <input
+                type="text"
+                value={exampleEnglishValue}
+                onChange={(e) => setExampleEnglishValue(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
               />
               <div className="flex gap-2 justify-end">
                 <button
