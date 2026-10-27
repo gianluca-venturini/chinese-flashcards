@@ -1,14 +1,27 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { type Word } from "@/lib/schema";
-import { newWord } from "@/lib/schema";
 import { CategoryId, CATEGORY_IDS, CATEGORY_META } from "@/lib/categories";
 import { CATEGORY_COLORS, UNKNOWN_CATEGORY_COLOR } from "@/lib/colors";
 import { getShortDefinition } from "@/lib/formatDefinition";
-import { getAllWords, putWord } from "@/lib/storage";
+import { getAllWords, putWord, putWordsRaw } from "@/lib/storage";
 import { syncFromServer, ensureWords } from "@/lib/sync";
-import { translateWords, examplifyWords, generatePinyin } from "@/lib/apiClient";
-import { lookupPinyinForWord, lookupPinyinForWords } from "@/lib/pinyinTable";
+import { createWord, generateFields, mapLimit } from "@/lib/apiClient";
+import { lookupPinyinForWords } from "@/lib/pinyinTable";
+
+const MAX_PARALLEL_CALLS = 5;
+
+// Saves the changes locally, then on the server. If the server call fails,
+// the local change stays and the next sync pushes it.
+async function saveChanges(word: Word, changes: Partial<Word>): Promise<Word> {
+  const updated = await putWord({ ...word, ...changes });
+  try {
+    await ensureWords([updated]);
+  } catch (err) {
+    console.warn('Save to server failed, will sync later:', err);
+  }
+  return updated;
+}
 
 type SortKey =
   | 'chinese'
@@ -80,7 +93,6 @@ export default function WordsPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newChinese, setNewChinese] = useState<string>("");
-  const [newEnglish, setNewEnglish] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [csvCopied, setCsvCopied] = useState<boolean>(false);
   const [showBulkAddModal, setShowBulkAddModal] = useState<boolean>(false);
@@ -145,12 +157,7 @@ export default function WordsPage() {
 
   const handleToggleDeprecated = async (word: Word) => {
     try {
-      const updated = await putWord({ ...word, deprecated: !word.deprecated });
-      try {
-        await ensureWords([updated]);
-      } catch {
-        // Local toggle preserved; will sync later
-      }
+      await saveChanges(word, { deprecated: !word.deprecated });
       await refreshWords();
       setSelectedWords((prev) => {
         if (!prev.has(word.chinese)) return prev;
@@ -176,12 +183,7 @@ export default function WordsPage() {
 
     setIsSubmitting(true);
     try {
-      const updated = await putWord({ ...editingWord, pinyin: pinyinValue, english: englishValue || null });
-      try {
-        await ensureWords([updated]);
-      } catch {
-        // Local edit preserved; will sync later
-      }
+      await saveChanges(editingWord, { pinyin: pinyinValue, english: englishValue || null });
       await refreshWords();
       handleDialogClose();
     } catch (err) {
@@ -236,24 +238,10 @@ export default function WordsPage() {
 
     setIsTranslating(true);
     try {
-      const translations = await translateWords(selected.map((w) => w.chinese));
-
-      const updatedWords = await Promise.all(
-        translations.map(async ({ word: chinese, english }) => {
-          const word = words.find((w) => w.chinese === chinese);
-          if (!word) return null;
-          return putWord({ ...word, english });
-        })
-      );
-
-      const validWords = updatedWords.filter((w): w is NonNullable<typeof w> => w !== null);
-
-      try {
-        await ensureWords(validWords);
-      } catch {
-        // Local updates preserved; will sync later
-      }
-
+      await mapLimit(selected, MAX_PARALLEL_CALLS, async (word) => {
+        const { english } = await generateFields(word.chinese, ['english']);
+        return saveChanges(word, { english: english ?? word.english });
+      });
       await refreshWords();
       setSelectedWords(new Set());
     } catch (err) {
@@ -270,28 +258,14 @@ export default function WordsPage() {
 
     setIsGeneratingExamples(true);
     try {
-      const knownWords = words.filter((w) => w.english !== null);
-      const examples = await examplifyWords(
-        selected.map((w) => w.chinese),
-        knownWords.map((w) => w.chinese)
-      );
-
-      const updatedWords = await Promise.all(
-        examples.map(async ({ word: chinese, example_chinese, example_pinyin, example_english }) => {
-          const word = words.find((w) => w.chinese === chinese);
-          if (!word) return null;
-          return putWord({ ...word, example_chinese, example_pinyin, example_english });
-        })
-      );
-
-      const validWords = updatedWords.filter((w): w is NonNullable<typeof w> => w !== null);
-
-      try {
-        await ensureWords(validWords);
-      } catch {
-        // Local updates preserved; will sync later
-      }
-
+      await mapLimit(selected, MAX_PARALLEL_CALLS, async (word) => {
+        const row = await generateFields(word.chinese, ['example_chinese', 'example_pinyin', 'example_english']);
+        return saveChanges(word, {
+          example_chinese: row.example_chinese ?? null,
+          example_pinyin: row.example_pinyin ?? null,
+          example_english: row.example_english ?? null,
+        });
+      });
       await refreshWords();
       setSelectedWords(new Set());
     } catch (err) {
@@ -361,16 +335,8 @@ export default function WordsPage() {
     if (toCreate.length === 0) return;
     setIsBulkCreating(true);
     try {
-      const created = await Promise.all(
-        toCreate.map((p) =>
-          putWord(newWord({ chinese: p.chinese, pinyin: p.pinyin })),
-        ),
-      );
-      try {
-        await ensureWords(created);
-      } catch {
-        // Local creates preserved; will sync later
-      }
+      const created = await mapLimit(toCreate, MAX_PARALLEL_CALLS, (p) => createWord(p.chinese));
+      await putWordsRaw(created);
       await refreshWords();
       setSelectedWords(new Set(created.map((w) => w.chinese)));
       setViewMode('table');
@@ -385,32 +351,18 @@ export default function WordsPage() {
 
   const handleAddWord = async (e: React.FormEvent) => {
     e.preventDefault();
+    const chinese = newChinese.trim();
+    if (words.some((w) => w.chinese === chinese)) {
+      alert('This word already exists');
+      return;
+    }
     setIsCreating(true);
     try {
-      let pinyin = newChinese;
-      try {
-        const lookup = await lookupPinyinForWord(newChinese);
-        if (lookup.complete) {
-          pinyin = lookup.pinyin;
-        } else {
-          const pinyins = await generatePinyin([newChinese]);
-          pinyin = pinyins[0]?.pinyin ?? lookup.pinyin;
-        }
-      } catch (err) {
-        console.warn('Pinyin lookup failed, falling back to API:', err);
-        const pinyins = await generatePinyin([newChinese]);
-        pinyin = pinyins[0]?.pinyin ?? newChinese;
-      }
-      const word = await putWord(newWord({ chinese: newChinese, pinyin, english: newEnglish || null }));
-      try {
-        await ensureWords([word]);
-      } catch {
-        // Local create preserved; will sync later
-      }
+      // Keep the server updated_at, so local and server rows match.
+      await putWordsRaw([await createWord(chinese)]);
       await refreshWords();
       setShowAddModal(false);
       setNewChinese("");
-      setNewEnglish("");
     } catch (err) {
       console.error('Error creating word:', err);
       alert('Failed to add word');
@@ -1033,15 +985,6 @@ export default function WordsPage() {
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                 required
                 autoFocus
-              />
-              <label className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                English <span className="text-zinc-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={newEnglish}
-                onChange={(e) => setNewEnglish(e.target.value)}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
               />
               <div className="flex gap-2 justify-end">
                 <button

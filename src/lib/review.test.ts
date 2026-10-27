@@ -73,7 +73,7 @@ describe('submitReview', () => {
 
     expect(fetchCalls).toHaveLength(1);
     expect(fetchCalls[0].method).toBe('PUT');
-    expect(fetchCalls[0].url).toBe('/api/words');
+    expect(fetchCalls[0].url).toBe('/api/words/sync');
     const body = fetchCalls[0].body as { words: unknown[] };
     expect(body.words).toHaveLength(1);
   });

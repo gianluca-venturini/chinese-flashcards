@@ -237,11 +237,11 @@ describe('syncBidirectional', () => {
 });
 
 describe('ensureWords', () => {
-  test('issues PUT /api/words with { words } and resolves on 2xx', async () => {
+  test('issues PUT /api/words/sync with { words } and resolves on 2xx', async () => {
     setupFetch({ success: true });
     await ensureWords([WORD_A]);
     expect(fetchCalls).toHaveLength(1);
-    expect(fetchCalls[0].url).toBe('/api/words');
+    expect(fetchCalls[0].url).toBe('/api/words/sync');
     expect(fetchCalls[0].method).toBe('PUT');
     const body = fetchCalls[0].body as { words: unknown[] };
     expect(body.words).toHaveLength(1);

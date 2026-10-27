@@ -2,10 +2,9 @@ import { describe, expect, test, mock, beforeEach } from 'bun:test';
 import {
   fetchAllWords,
   putWords,
-  classifyWords,
-  translateWords,
-  examplifyWords,
-  generatePinyin,
+  createWord,
+  generateFields,
+  mapLimit,
 } from './apiClient';
 import { newWord } from './schema';
 
@@ -55,10 +54,10 @@ describe('fetchAllWords', () => {
 });
 
 describe('putWords', () => {
-  test('PUTs /api/words with body { words }', async () => {
+  test('PUTs /api/words/sync with body { words }', async () => {
     setupFetch({ success: true });
     await putWords([WORD_A, WORD_B]);
-    expect(calls[0].url).toBe('/api/words');
+    expect(calls[0].url).toBe('/api/words/sync');
     expect(calls[0].method).toBe('PUT');
     expect((calls[0].body as { words: unknown[] }).words).toHaveLength(2);
   });
@@ -75,99 +74,59 @@ describe('putWords', () => {
   });
 });
 
-describe('classifyWords', () => {
-  test('POSTs /api/words/classify with body { chinese }', async () => {
-    setupFetch({ classifications: [{ word: '你好', category: 'feelings_thoughts_communication' }] });
-    const result = await classifyWords(['你好']);
-    expect(calls[0].url).toBe('/api/words/classify');
-    expect(calls[0].method).toBe('POST');
-    expect((calls[0].body as { chinese: string[] }).chinese).toEqual(['你好']);
-    expect(result[0].category).toBe('feelings_thoughts_communication');
+describe('createWord', () => {
+  test('PUTs /api/words with body { chinese } and returns the word', async () => {
+    setupFetch({ word: WORD_A, success: true });
+    const result = await createWord('你好');
+    expect(calls[0].url).toBe('/api/words');
+    expect(calls[0].method).toBe('PUT');
+    expect(calls[0].body).toEqual({ chinese: '你好' });
+    expect(result.chinese).toBe('你好');
   });
 
-  test('empty array is a no-op', async () => {
-    setupFetch({});
-    const result = await classifyWords([]);
-    expect(calls).toHaveLength(0);
-    expect(result).toHaveLength(0);
-  });
-
-  test('throws on malformed response', async () => {
-    setupFetch({ classifications: [{ word: '好', category: 'not_a_real_category' }] });
-    await expect(classifyWords(['好'])).rejects.toThrow();
-  });
-});
-
-describe('translateWords', () => {
-  test('POSTs /api/words/translate with body { words }', async () => {
-    setupFetch({ translations: [{ word: '你好', english: 'hello' }] });
-    const result = await translateWords(['你好']);
-    expect(calls[0].url).toBe('/api/words/translate');
-    expect(calls[0].method).toBe('POST');
-    expect((calls[0].body as { words: string[] }).words).toEqual(['你好']);
-    expect(result[0].english).toBe('hello');
-  });
-
-  test('empty array is a no-op', async () => {
-    setupFetch({});
-    const result = await translateWords([]);
-    expect(calls).toHaveLength(0);
-    expect(result).toHaveLength(0);
+  test('throws on 409 (word already exists)', async () => {
+    setupFetch({ success: false }, 409);
+    await expect(createWord('你好')).rejects.toThrow();
   });
 
   test('throws on malformed response', async () => {
-    setupFetch({ translations: [{ not: 'right' }] });
-    await expect(translateWords(['好'])).rejects.toThrow();
+    setupFetch({ word: { not: 'a word' } });
+    await expect(createWord('你好')).rejects.toThrow();
   });
 });
 
-describe('examplifyWords', () => {
-  test('POSTs /api/words/examplify with body { words, knownWords }', async () => {
-    setupFetch({
-      examples: [{ word: '你好', example_chinese: '你好吗？', example_pinyin: 'nǐ hǎo ma?', example_english: 'How are you?' }],
+describe('generateFields', () => {
+  test('POSTs /api/words with body { chinese, fields } and returns the row', async () => {
+    setupFetch({ row: { english: 'hello' }, success: true });
+    const result = await generateFields('你好', ['english']);
+    expect(calls[0].url).toBe('/api/words');
+    expect(calls[0].method).toBe('POST');
+    expect(calls[0].body).toEqual({ chinese: '你好', fields: ['english'] });
+    expect(result).toEqual({ english: 'hello' });
+  });
+
+  test('throws on an invalid category in the row', async () => {
+    setupFetch({ row: { category: 'not_a_real_category' } });
+    await expect(generateFields('好', ['category'])).rejects.toThrow();
+  });
+});
+
+describe('mapLimit', () => {
+  test('keeps the input order and never runs more than the limit at once', async () => {
+    let running = 0;
+    let maxRunning = 0;
+    const result = await mapLimit([30, 10, 20, 5, 15], 2, async (ms) => {
+      running++;
+      maxRunning = Math.max(maxRunning, running);
+      await new Promise((r) => setTimeout(r, ms));
+      running--;
+      return ms * 2;
     });
-    const result = await examplifyWords(['你好'], ['谢谢']);
-    expect(calls[0].url).toBe('/api/words/examplify');
-    expect(calls[0].method).toBe('POST');
-    const body = calls[0].body as { words: string[]; knownWords: string[] };
-    expect(body.words).toEqual(['你好']);
-    expect(body.knownWords).toEqual(['谢谢']);
-    expect(result[0].example_chinese).toBe('你好吗？');
-    expect(result[0].example_english).toBe('How are you?');
+    expect(result).toEqual([60, 20, 40, 10, 30]);
+    expect(maxRunning).toBe(2);
   });
 
-  test('empty targets is a no-op', async () => {
-    setupFetch({});
-    const result = await examplifyWords([], ['谢谢']);
-    expect(calls).toHaveLength(0);
-    expect(result).toHaveLength(0);
-  });
-
-  test('throws on malformed response', async () => {
-    setupFetch({ examples: [{ missing: 'fields' }] });
-    await expect(examplifyWords(['好'], [])).rejects.toThrow();
-  });
-});
-
-describe('generatePinyin', () => {
-  test('POSTs /api/words/pinyin with body { chinese }', async () => {
-    setupFetch({ pinyins: [{ word: '你好', pinyin: 'nǐ hǎo' }] });
-    const result = await generatePinyin(['你好']);
-    expect(calls[0].url).toBe('/api/words/pinyin');
-    expect(calls[0].method).toBe('POST');
-    expect((calls[0].body as { chinese: string[] }).chinese).toEqual(['你好']);
-    expect(result[0].pinyin).toBe('nǐ hǎo');
-  });
-
-  test('empty array is a no-op', async () => {
-    setupFetch({});
-    const result = await generatePinyin([]);
-    expect(calls).toHaveLength(0);
-    expect(result).toHaveLength(0);
-  });
-
-  test('throws on malformed response', async () => {
-    setupFetch({ pinyins: [{ bad: 'shape' }] });
-    await expect(generatePinyin(['好'])).rejects.toThrow();
+  test('empty input returns an empty array', async () => {
+    expect(await mapLimit([], 5, async (x) => x)).toEqual([]);
   });
 });

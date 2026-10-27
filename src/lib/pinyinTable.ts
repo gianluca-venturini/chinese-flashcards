@@ -30,13 +30,6 @@ function lookup(word: string, table: PinyinTable): { pinyin: string; complete: b
   return { pinyin: parts.join(' '), complete };
 }
 
-export async function lookupPinyinForWord(
-  word: string,
-): Promise<{ pinyin: string; complete: boolean }> {
-  const table = await loadTable();
-  return lookup(word, table);
-}
-
 export async function lookupPinyinForWords(
   words: string[],
 ): Promise<{ word: string; pinyin: string; complete: boolean }[]> {

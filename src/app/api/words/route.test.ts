@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { rowToWord, PutBodySchema } from './wordMapper';
+import { rowToWord, SyncBodySchema, GenerateBodySchema } from './wordMapper';
 import { WordSchema, newWord } from '@/lib/schema';
 
 const FULL_ROW = {
@@ -69,23 +69,41 @@ describe('rowToWord', () => {
   });
 });
 
-describe('PutBodySchema', () => {
+describe('SyncBodySchema', () => {
   test('accepts { words: [] }', () => {
-    expect(() => PutBodySchema.parse({ words: [] })).not.toThrow();
+    expect(() => SyncBodySchema.parse({ words: [] })).not.toThrow();
   });
 
   test('accepts { words: [w1, w2] }', () => {
     const w1 = newWord({ chinese: '你好', pinyin: 'nǐ hǎo' });
     const w2 = newWord({ chinese: '谢谢', pinyin: 'xiè xie' });
-    expect(() => PutBodySchema.parse({ words: [w1, w2] })).not.toThrow();
+    expect(() => SyncBodySchema.parse({ words: [w1, w2] })).not.toThrow();
   });
 
   test('rejects a bare Word object (not wrapped in { words })', () => {
     const word = newWord({ chinese: '你好', pinyin: 'nǐ hǎo' });
-    expect(() => PutBodySchema.parse(word)).toThrow();
+    expect(() => SyncBodySchema.parse(word)).toThrow();
   });
 
   test('rejects a body missing the words key', () => {
-    expect(() => PutBodySchema.parse({ notWords: [] })).toThrow();
+    expect(() => SyncBodySchema.parse({ notWords: [] })).toThrow();
+  });
+});
+
+describe('GenerateBodySchema', () => {
+  test('accepts a word and a list of fields', () => {
+    expect(() => GenerateBodySchema.parse({ chinese: '你好', fields: ['english', 'category'] })).not.toThrow();
+  });
+
+  test('rejects an empty fields list', () => {
+    expect(() => GenerateBodySchema.parse({ chinese: '你好', fields: [] })).toThrow();
+  });
+
+  test('rejects an unknown field', () => {
+    expect(() => GenerateBodySchema.parse({ chinese: '你好', fields: ['n'] })).toThrow();
+  });
+
+  test('rejects chinese in fields (the key cannot change)', () => {
+    expect(() => GenerateBodySchema.parse({ chinese: '你好', fields: ['chinese'] })).toThrow();
   });
 });

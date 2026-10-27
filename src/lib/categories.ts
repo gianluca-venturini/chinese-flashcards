@@ -1,7 +1,3 @@
-import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
-
 export const CATEGORY_IDS = [
   'people_identity',
   'body_health',
@@ -77,58 +73,15 @@ CategoryId,
   },
 };
 
-/** This is a categorization prompt that asks the LLM to categorize a word into one of the categories. */
-const CATEGORY_SYSTEM_PROMPT = `
-You are an expert classifier for single Chinese words (usually 1-3 characters long).
-
-Your job: given ONE word, choose exactly ONE category ID from this list:
+/** Rules that tell the LLM how to pick one category ID for a word. */
+export const CATEGORY_RULES = `
+Choose exactly ONE category ID from this list:
 
 ${CATEGORY_IDS.map((category) => `- ${category} – ${CATEGORY_META[category].description}`).join('\n')}
 
-Rules:
+Category rules:
 
-- Input is usually a single word with no context, so choose its most typical beginner-level dictionary sense.  
-- If it fits multiple categories, pick the one that is most useful in a learner-friendly word list.
-
-  * Pure place names (like 学校, 银行, 公园, 国家名) → default to "places_transport_travel".
-  * Jobs or roles (老师, 工程师, 医生) → "people_identity" (they are people).
-  * Abstract school/work nouns (课程, 考试, 公司, 工作) → "school_work_technology".
-  * Pure place names (like 学校, 银行, 公园, 国家名) → default to "places_transport_travel".
-  * Jobs or roles (老师, 工程师, 医生) → "people_identity" (they are people).
-  * Abstract school/work nouns (课程, 考试, 公司, 工作) → "school_work_technology".
-
-- If the word is clearly about food or buying/selling, always use "food_restaurant_shopping".
-- If it's clearly an emotion or mental/communication verb, use "feelings_thoughts_communication".
-- Always answer with ONLY the category ID string (for example: people_identity).
-`;
-
-/** @deprecated because it's too slow. Use classifyChineseWords instead. */
-export async function classifyChineseWord(
-  word: string,
-): Promise<CategoryId> {
-  const { object: category } = await generateObject({
-    model: openai('gpt-4.1'),
-    output: 'enum',
-    enum: [...CATEGORY_IDS],
-    temperature: 0,
-    system: CATEGORY_SYSTEM_PROMPT,
-    prompt: `${word}`,
-  });
-
-  return category as CategoryId;
-}
-
-/** Batch version of the categorization prompt for multiple words. */
-const BATCH_CATEGORY_SYSTEM_PROMPT = `
-You are an expert classifier for single Chinese words (usually 1-3 characters long).
-
-Your job: given a list of words, classify each word into exactly ONE category ID from this list:
-
-${CATEGORY_IDS.map((category) => `- ${category} – ${CATEGORY_META[category].description}`).join('\n')}
-
-Rules:
-
-- Input is usually a single word with no context, so choose its most typical beginner-level dictionary sense.  
+- The word usually has no context, so choose its most typical beginner-level dictionary sense.
 - If it fits multiple categories, pick the one that is most useful in a learner-friendly word list.
 
   * Pure place names (like 学校, 银行, 公园, 国家名) → default to "places_transport_travel".
@@ -137,32 +90,4 @@ Rules:
 
 - If the word is clearly about food or buying/selling, always use "food_restaurant_shopping".
 - If it's clearly an emotion or mental/communication verb, use "feelings_thoughts_communication".
-- Return an array with one classification per word, maintaining the same order as the input.
 `;
-
-const ClassificationSchema = z.object({
-  word: z.string(),
-  category: z.enum([...CATEGORY_IDS] as [string, ...string[]]),
-});
-
-const BatchClassificationSchema = z.object({
-  classifications: z.array(ClassificationSchema),
-});
-
-export async function classifyChineseWords(
-  words: string[],
-): Promise<{ word: string; category: CategoryId }[]> {
-  if (words.length === 0) {
-    return [];
-  }
-
-  const { object } = await generateObject({
-    model: openai('gpt-4.1'),
-    schema: BatchClassificationSchema,
-    temperature: 0,
-    system: BATCH_CATEGORY_SYSTEM_PROMPT,
-    prompt: `Classify these Chinese words:\n${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}`,
-  });
-
-  return object.classifications as { word: string; category: CategoryId }[];
-}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { getAllWords, putWord } from "@/lib/storage";
-import { classifyWords } from "@/lib/apiClient";
+import { generateFields, mapLimit } from "@/lib/apiClient";
 import { ensureWords } from "@/lib/sync";
 
 export default function ClassifyButton() {
@@ -22,17 +22,10 @@ export default function ClassifyButton() {
         return;
       }
 
-      const classifications = await classifyWords(unclassified.map((w) => w.chinese));
-
-      const updatedWords = (
-        await Promise.all(
-          classifications.map(async ({ word: chinese, category }) => {
-            const word = allWords.find((w) => w.chinese === chinese);
-            if (!word) return null;
-            return putWord({ ...word, category });
-          })
-        )
-      ).filter((w): w is NonNullable<typeof w> => w !== null);
+      const updatedWords = await mapLimit(unclassified, 5, async (word) => {
+        const { category } = await generateFields(word.chinese, ['category']);
+        return putWord({ ...word, category: category ?? null });
+      });
 
       try {
         await ensureWords(updatedWords);

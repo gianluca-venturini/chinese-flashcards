@@ -1,8 +1,23 @@
 import { z } from 'zod';
-import { WordSchema, type Word } from '@/lib/schema';
+import {
+  WordSchema,
+  GENERATED_FIELDS,
+  type Word,
+} from '@/lib/schema';
 
-export const PutBodySchema = z.object({
+export const SyncBodySchema = z.object({
   words: z.array(WordSchema),
+});
+
+export const CreateBodySchema = z.object({
+  chinese: z.string().trim().min(1, 'chinese is required'),
+});
+
+export const GenerateBodySchema = z.object({
+  chinese: z.string().trim().min(1, 'chinese is required'),
+  fields: z
+    .array(z.enum(GENERATED_FIELDS).exclude(['chinese']))
+    .min(1, 'At least one field is required'),
 });
 
 function toIso(v: unknown): string | null {

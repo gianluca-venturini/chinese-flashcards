@@ -1,51 +1,26 @@
 import { z } from 'zod';
-import { type Word, WordSchema } from './schema';
-import { type CategoryId, CATEGORY_IDS } from './categories';
+import {
+  type Word,
+  type GeneratedRow,
+  type GeneratedField,
+  WordSchema,
+  GeneratedRowSchema,
+} from './schema';
 
 const FetchAllWordsResponseSchema = z.object({
   words: z.array(WordSchema),
-});
-
-const ClassifyResponseSchema = z.object({
-  classifications: z.array(
-    z.object({
-      word: z.string(),
-      category: z.enum([...CATEGORY_IDS] as [string, ...string[]]),
-    }),
-  ),
-});
-
-const TranslateResponseSchema = z.object({
-  translations: z.array(
-    z.object({
-      word: z.string(),
-      english: z.string(),
-    }),
-  ),
-});
-
-const ExamplifyResponseSchema = z.object({
-  examples: z.array(
-    z.object({
-      word: z.string(),
-      example_chinese: z.string(),
-      example_pinyin: z.string(),
-      example_english: z.string(),
-    }),
-  ),
 });
 
 const PutWordsResponseSchema = z.object({
   success: z.boolean(),
 });
 
-const PinyinResponseSchema = z.object({
-  pinyins: z.array(
-    z.object({
-      word: z.string(),
-      pinyin: z.string(),
-    }),
-  ),
+const CreateWordResponseSchema = z.object({
+  word: WordSchema,
+});
+
+const GenerateFieldsResponseSchema = z.object({
+  row: GeneratedRowSchema.partial(),
 });
 
 const API_TIMEOUT_MS = 60_000;
@@ -73,7 +48,7 @@ export async function fetchAllWords(): Promise<Word[]> {
 
 export async function putWords(words: Word[]): Promise<void> {
   if (words.length === 0) return;
-  const res = await fetchWithTimeout('/api/words', {
+  const res = await fetchWithTimeout('/api/words/sync', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ words }),
@@ -81,54 +56,44 @@ export async function putWords(words: Word[]): Promise<void> {
   await parseJson(res, PutWordsResponseSchema);
 }
 
-export async function classifyWords(
-  chinese: string[],
-): Promise<{ word: string; category: CategoryId }[]> {
-  if (chinese.length === 0) return [];
-  const res = await fetchWithTimeout('/api/words/classify', {
-    method: 'POST',
+// Creates one word on the server. The server makes all its fields with the LLM.
+export async function createWord(chinese: string): Promise<Word> {
+  const res = await fetchWithTimeout('/api/words', {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chinese }),
   });
-  return (await parseJson(res, ClassifyResponseSchema)).classifications as {
-    word: string;
-    category: CategoryId;
-  }[];
+  return (await parseJson(res, CreateWordResponseSchema)).word;
 }
 
-export async function translateWords(
-  chinese: string[],
-): Promise<{ word: string; english: string }[]> {
-  if (chinese.length === 0) return [];
-  const res = await fetchWithTimeout('/api/words/translate', {
+// Makes only the given fields of one word with the LLM. Saves nothing.
+export async function generateFields(
+  chinese: string,
+  fields: Exclude<GeneratedField, 'chinese'>[],
+): Promise<Partial<GeneratedRow>> {
+  const res = await fetchWithTimeout('/api/words', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ words: chinese }),
+    body: JSON.stringify({ chinese, fields }),
   });
-  return (await parseJson(res, TranslateResponseSchema)).translations;
+  return (await parseJson(res, GenerateFieldsResponseSchema)).row;
 }
 
-export async function examplifyWords(
-  targets: string[],
-  knownWords: string[],
-): Promise<{ word: string; example_chinese: string; example_pinyin: string; example_english: string }[]> {
-  if (targets.length === 0) return [];
-  const res = await fetchWithTimeout('/api/words/examplify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ words: targets, knownWords }),
-  });
-  return (await parseJson(res, ExamplifyResponseSchema)).examples;
-}
-
-export async function generatePinyin(
-  chinese: string[],
-): Promise<{ word: string; pinyin: string }[]> {
-  if (chinese.length === 0) return [];
-  const res = await fetchWithTimeout('/api/words/pinyin', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chinese }),
-  });
-  return (await parseJson(res, PinyinResponseSchema)).pinyins;
+// Runs fn on each item, with at most `limit` calls at the same time.
+// Results keep the order of items.
+export async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
 }
