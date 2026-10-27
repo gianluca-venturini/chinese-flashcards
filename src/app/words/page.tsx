@@ -906,7 +906,7 @@ export default function WordsPage() {
                   {sortedWords.map((word, index) => (
                     <tr
                       key={`${word.chinese}-${index}`}
-                      className={`group border-b border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-750 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
+                      className={`group border-b border-zinc-100 dark:border-zinc-700 cursor-pointer ${selectedWords.has(word.chinese) ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${word.deprecated ? 'opacity-50' : ''}`}
                       onClick={(e) => handleRowSelect(index, e.shiftKey)}
                     >
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
